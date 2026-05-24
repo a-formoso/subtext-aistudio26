@@ -226,6 +226,10 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                         <span className="text-slate-200 text-[11px]">{setting.dimensions.duration}</span>
                       </div>
                       <div className="col-span-2 border-t border-white/5 pt-2">
+                        <span className="text-gray-500 block text-[9px] mb-0.5">LOCATION</span>
+                        <span className="text-slate-200 text-[11px]">{setting.dimensions.location}</span>
+                      </div>
+                      <div className="col-span-2 border-t border-white/5 pt-2">
                         <span className="text-gray-500 block text-[9px] mb-0.5">DOMINANT CONFLICT</span>
                         <span className="text-slate-200 text-[11px]">{setting.dimensions.conflict_level}</span>
                       </div>
