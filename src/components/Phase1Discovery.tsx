@@ -192,7 +192,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                     leftTab === "env" ? "bg-orange-600 text-white" : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  Environment
+                  Setting
                 </button>
                 <button
                   onClick={() => setLeftTab("dialectic")}
@@ -200,7 +200,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                     leftTab === "dialectic" ? "bg-orange-600 text-white" : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  Dialectic
+                  Meaning
                 </button>
               </div>
 
