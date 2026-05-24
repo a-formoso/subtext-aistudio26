@@ -79,7 +79,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
       <div className="rounded-xl border border-white/10 bg-white/5 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
           <div>
-            <span className="font-mono text-[9px] tracking-widest text-orange-400 uppercase font-bold">Story Setup</span>
+            <span className="font-mono text-[9px] tracking-widest text-slate-400 uppercase font-bold">Story Setup</span>
             <h2 className="text-base font-semibold text-white mt-0.5">Your Story Idea</h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -161,7 +161,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
           {/* Card Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/8 pb-3 mb-4">
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-orange-950/40 border border-orange-800/40 text-orange-400">
+              <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 border border-white/15 text-slate-300">
                 Direction 0{opt.option_id}
               </span>
               {isSelected && (
@@ -221,7 +221,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                     transition={{ duration: 0.15 }}
                     className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3"
                   >
-                    <span className="font-mono text-[9px] text-orange-400 tracking-widest uppercase font-bold block">World & Setting</span>
+                    <span className="font-mono text-[9px] text-slate-400 tracking-widest uppercase font-bold block">World & Setting</span>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Time Period</span>
@@ -254,7 +254,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                     transition={{ duration: 0.15 }}
                     className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3"
                   >
-                    <span className="font-mono text-[9px] text-orange-400 tracking-widest uppercase font-bold block">Core Message</span>
+                    <span className="font-mono text-[9px] text-slate-400 tracking-widest uppercase font-bold block">Core Message</span>
                     <p className="text-white font-medium italic leading-relaxed text-[11px]">
                       "{meaning.controlling_idea}"
                     </p>
@@ -277,7 +277,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
             <div className="lg:col-span-8 flex flex-col gap-3">
               {/* Section label + nav */}
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] text-orange-400 tracking-widest uppercase font-bold">
+                <span className="font-mono text-[9px] text-slate-400 tracking-widest uppercase font-bold">
                   Characters & Voice Settings
                 </span>
                 {characters.length > 1 && (
@@ -327,7 +327,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                     {/* Character header */}
                     <div className="flex justify-between items-center pb-2.5 border-b border-white/8">
                       <div>
-                        <span className="text-[9px] font-mono text-orange-400 uppercase tracking-widest block mb-0.5">{char.identity.cast_orbit}</span>
+                        <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest block mb-0.5">{char.identity.cast_orbit}</span>
                         <span className="font-bold text-white text-sm tracking-tight">{char.identity.name}</span>
                       </div>
                       <span className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-orange-950/40 text-orange-300 border border-orange-800/50 uppercase font-bold">
@@ -340,7 +340,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                       {/* Casting */}
                       <div className="bg-black/40 p-3 rounded-xl border border-white/8 space-y-2">
                         <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-200 uppercase font-bold tracking-wider">
-                          <Fingerprint className="w-3 h-3 text-orange-400" />
+                          <Fingerprint className="w-3 h-3 text-slate-400" />
                           Voice Casting
                         </div>
                         <div className="space-y-1.5">
@@ -413,7 +413,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                       ].map(({ label, value, highlight }) => (
                         <div key={label} className="bg-white/5 p-2 rounded-lg border border-white/8">
                           <span className="text-slate-500 font-mono text-[8px] uppercase tracking-wider block mb-0.5">{label}</span>
-                          <span className={`font-medium leading-tight text-[10px] ${highlight ? "text-orange-400 font-mono font-bold" : "text-slate-100"}`}>
+                          <span className="font-medium leading-tight text-[10px] text-slate-100">
                             {value}
                           </span>
                         </div>
@@ -441,10 +441,10 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                         className="w-full flex items-center justify-between p-2.5 hover:bg-white/5 transition-colors text-left"
                       >
                         <span className="flex items-center gap-1.5 font-mono text-[9px] text-slate-200 uppercase font-bold tracking-wider">
-                          <Sparkles className="w-3 h-3 text-orange-400" />
+                          <Sparkles className="w-3 h-3 text-slate-400" />
                           Visual Style Guide
                         </span>
-                        <span className="text-orange-400 font-mono text-[9px] font-bold">
+                        <span className="text-slate-400 font-mono text-[9px] font-bold">
                           {expandedVisualsCharId === char.id ? "[ Hide ]" : "[ Expand ]"}
                         </span>
                       </button>
@@ -473,7 +473,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                           </div>
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-orange-400 font-mono text-[9px] uppercase tracking-wider font-bold">Image Generation Prompt</span>
+                              <span className="text-slate-300 font-mono text-[9px] uppercase tracking-wider font-bold">Image Generation Prompt</span>
                               <button
                                 onClick={() => {
                                   const txt = char.prompts?.master_visual_reference?.master_grid_prompt || "";
@@ -489,7 +489,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                                 }
                               </button>
                             </div>
-                            <div className="p-2.5 rounded bg-black border border-white/10 font-mono text-[10px] text-orange-400 overflow-x-auto whitespace-pre-wrap leading-normal">
+                            <div className="p-2.5 rounded bg-black border border-white/10 font-mono text-[10px] text-emerald-400/80 overflow-x-auto whitespace-pre-wrap leading-normal">
                               {char.prompts?.master_visual_reference?.master_grid_prompt}
                             </div>
                           </div>

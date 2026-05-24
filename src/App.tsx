@@ -349,7 +349,7 @@ export default function App() {
             <div className="hidden md:block mt-auto mb-4">
               <div className="w-1 h-32 bg-white/5 rounded-full relative overflow-hidden">
                 <div 
-                  className="absolute top-0 w-full bg-orange-600 shadow-[0_0_10px_rgba(234,88,12,0.8)] transition-all duration-350"
+                  className="absolute top-0 w-full bg-slate-500 transition-all duration-350"
                   style={{
                     height: activePhase === 1 ? "33%" : activePhase === 2 ? "66%" : "100%"
                   }}
@@ -365,7 +365,7 @@ export default function App() {
               
               <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-2">
                 <div>
-                  <span className="text-[10px] uppercase tracking-[0.25em] text-orange-500 font-bold mb-1 block">
+                  <span className="text-[10px] uppercase tracking-[0.25em] text-slate-400 font-bold mb-1 block">
                     {activePhase === 1 ? "Phase 1: Cosmology Discovery" : activePhase === 2 ? "Phase 2: Pre-Production Design" : "Phase 3: Screenplay Execution"}
                   </span>
                   <h2 className="text-2xl font-light text-white tracking-tight">
@@ -431,15 +431,15 @@ export default function App() {
                 {/* Elegant dynamic vertical bars */}
                 <div className="flex items-end justify-between gap-1 h-28 px-2 border-b border-white/5 pb-2">
                   <div 
-                    className="w-full bg-orange-600/30 rounded-t-sm border-t border-orange-500 transition-all duration-700"
+                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700"
                     style={{ height: selectedOption?.option_id === 3 ? "55%" : selectedOption?.option_id === 2 ? "40%" : "20%" }}
                   />
                   <div 
-                    className="w-full bg-orange-600/30 rounded-t-sm border-t border-orange-500 transition-all duration-700" 
+                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700" 
                     style={{ height: selectedOption?.option_id === 3 ? "75%" : selectedOption?.option_id === 2 ? "60%" : "35%" }}
                   />
                   <div 
-                    className="w-full bg-orange-600/30 rounded-t-sm border-t border-orange-500 transition-all duration-700" 
+                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700" 
                     style={{ height: selectedOption?.option_id === 3 ? "45%" : selectedOption?.option_id === 2 ? "55%" : "30%" }}
                   />
                   <div 
@@ -452,11 +452,11 @@ export default function App() {
                     }`}
                   />
                   <div 
-                    className="w-full bg-orange-600/30 rounded-t-sm border-t border-orange-500 transition-all duration-700" 
+                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700" 
                     style={{ height: selectedOption?.option_id === 3 ? "80%" : selectedOption?.option_id === 2 ? "70%" : "60%" }}
                   />
                   <div 
-                    className="w-full bg-orange-600/30 rounded-t-sm border-t border-orange-500 transition-all duration-700" 
+                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700" 
                     style={{ height: selectedOption?.option_id === 3 ? "70%" : selectedOption?.option_id === 2 ? "80%" : "45%" }}
                   />
                 </div>
