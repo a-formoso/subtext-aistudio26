@@ -131,7 +131,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
             return (
               <button
                 key={o.option_id}
-                onClick={() => setActiveOptionId(o.option_id)}
+                onClick={() => { setActiveOptionId(o.option_id); onSelectOption(o); }}
                 className={`px-3 py-1.5 rounded-lg font-mono text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   isActive
                     ? "bg-orange-600 text-white shadow-md"
