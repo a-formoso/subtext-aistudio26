@@ -415,7 +415,7 @@ export default function App() {
               <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
                 <div className="flex justify-between items-center">
                   <h5 className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">
-                    Biochemical Flora Output
+                    Greenhouse Stress Monitor
                   </h5>
                   <div className={`w-2 h-2 rounded-full animate-pulse ${selectedOption?.option_id === 3 ? "bg-red-500" : selectedOption?.option_id === 2 ? "bg-amber-500" : "bg-emerald-500"}`} />
                 </div>
@@ -454,9 +454,9 @@ export default function App() {
                 </div>
 
                 <div className="flex justify-between text-[10px] font-mono text-gray-500">
-                  <span>STRESS INDEX: {selectedOption?.option_id === 3 ? "88.4%" : selectedOption?.option_id === 2 ? "58.1%" : "32.0%"}</span>
+                  <span>TENSION LEVEL: {selectedOption?.option_id === 3 ? "88.4%" : selectedOption?.option_id === 2 ? "58.1%" : "32.0%"}</span>
                   <span className={selectedOption?.option_id === 3 ? "text-red-500" : selectedOption?.option_id === 2 ? "text-amber-500" : "text-emerald-500"}>
-                    {selectedOption?.option_id === 3 ? "CRITICAL SHIFT" : selectedOption?.option_id === 2 ? "WARNING ESCALATION" : "STEADY FLOW"}
+                    {selectedOption?.option_id === 3 ? "CRITICAL" : selectedOption?.option_id === 2 ? "RISING" : "STABLE"}
                   </span>
                 </div>
               </div>
@@ -464,9 +464,9 @@ export default function App() {
               {/* Dynamic JSON Live Stream panel */}
               <div className="flex-1 flex flex-col bg-black/60 rounded-xl border border-white/10 overflow-hidden min-h-[300px]">
                 <div className="bg-white/5 px-4 py-2 flex justify-between border-b border-white/10 items-center">
-                  <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">Blueprint State Engine</span>
+                  <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">Story Data Snapshot</span>
                   <span className="text-[9px] font-mono text-emerald-500 uppercase flex items-center gap-1">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Synchronized
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Up to Date
                   </span>
                 </div>
                 
@@ -496,8 +496,8 @@ export default function App() {
                   {getDisplayCharacters(selectedOption).map((char, index) => (
                     <div key={index}>
                       <div className="flex justify-between text-[9px] text-gray-500 mb-1 font-mono">
-                        <span>ACTOR: {char.name.toUpperCase()}</span>
-                        <span>UNCONSCIOUS DRIVE STATE: {index === 0 ? "92%" : "27%"}</span>
+                        <span>{char.name.toUpperCase()}</span>
+                        <span>INTERNAL PRESSURE: {index === 0 ? "92%" : "27%"}</span>
                       </div>
                       <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                         <div 

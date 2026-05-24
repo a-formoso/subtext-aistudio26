@@ -77,8 +77,8 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
       <div className="rounded-xl border border-white/10 bg-white/5 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
           <div>
-            <span className="font-mono text-[9px] tracking-widest text-orange-400 uppercase font-bold">Establishing Cosmology</span>
-            <h2 className="text-base font-semibold text-white mt-0.5">Active Narrative Premise</h2>
+            <span className="font-mono text-[9px] tracking-widest text-orange-400 uppercase font-bold">Story Setup</span>
+            <h2 className="text-base font-semibold text-white mt-0.5">Your Story Idea</h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -121,8 +121,8 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
       {/* ── Option Selector Row ──────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="font-sans text-sm font-semibold text-white">Phase 1: Story Cosmology Options</h3>
-          <p className="font-sans text-[11px] text-slate-400 mt-0.5">Select an option below, then lock it to proceed.</p>
+          <h3 className="font-sans text-sm font-semibold text-white">Story Directions</h3>
+          <p className="font-sans text-[11px] text-slate-400 mt-0.5">Pick a direction below, then lock it in to continue.</p>
         </div>
         <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10 shrink-0">
           {options.map((o) => {
@@ -162,11 +162,11 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/8 pb-3 mb-4">
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-orange-950/40 border border-orange-800/40 text-orange-400">
-                PROJECT TARGET 0{opt.option_id}
+                Direction 0{opt.option_id}
               </span>
               {isSelected && (
                 <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-mono font-bold uppercase">
-                  <CheckCircle className="w-3 h-3" /> LOCKED PIPELINE
+                  <CheckCircle className="w-3 h-3" /> Selected
                 </span>
               )}
               <h4 className="font-sans text-lg font-bold text-white tracking-tight">{opt.title}</h4>
@@ -181,7 +181,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                   : "bg-orange-600/15 hover:bg-orange-600/30 border border-orange-500/60 hover:border-orange-400 text-orange-300 hover:text-white"
               }`}
             >
-              {isSelected ? "Locked: Proceed to Phase 2" : "Select & Lock Cosmology"}
+              {isSelected ? "Locked — Continue to Phase 2" : "Select This Direction"}
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -221,10 +221,10 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                     transition={{ duration: 0.15 }}
                     className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3"
                   >
-                    <span className="font-mono text-[9px] text-orange-400 tracking-widest uppercase font-bold block">McKee Story Environment</span>
+                    <span className="font-mono text-[9px] text-orange-400 tracking-widest uppercase font-bold block">World & Setting</span>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Period / Era</span>
+                        <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Time Period</span>
                         <span className="text-white text-[11px] font-medium">{setting.dimensions.period}</span>
                       </div>
                       <div>
@@ -236,11 +236,11 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                         <span className="text-white text-[11px] font-medium">{setting.dimensions.location}</span>
                       </div>
                       <div className="col-span-2 border-t border-white/8 pt-2.5">
-                        <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Dominant Conflict</span>
+                        <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Main Conflict</span>
                         <span className="text-slate-200 text-[11px]">{setting.dimensions.conflict_level}</span>
                       </div>
                       <div className="col-span-2 border-t border-white/8 pt-2.5">
-                        <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Creative Limitation</span>
+                        <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Story Constraint</span>
                         <span className="text-slate-300 italic text-[11px]">{setting.creative_limitation}</span>
                       </div>
                     </div>
@@ -254,17 +254,17 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                     transition={{ duration: 0.15 }}
                     className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3"
                   >
-                    <span className="font-mono text-[9px] text-orange-400 tracking-widest uppercase font-bold block">Controlling Idea & Dialectic</span>
+                    <span className="font-mono text-[9px] text-orange-400 tracking-widest uppercase font-bold block">Core Message</span>
                     <p className="text-white font-medium italic leading-relaxed text-[11px]">
                       "{meaning.controlling_idea}"
                     </p>
                     <div className="bg-black/50 p-3 rounded-lg text-[11px] font-mono space-y-2 border border-white/8">
                       <div>
-                        <span className="text-emerald-400 font-bold block text-[9px] mb-0.5 uppercase tracking-wider">+ Positive Charge</span>
+                        <span className="text-emerald-400 font-bold block text-[9px] mb-0.5 uppercase tracking-wider">+ The Argument For</span>
                         <p className="text-slate-200">{meaning.dialectical_debate.positive_idea}</p>
                       </div>
                       <div className="border-t border-white/8 pt-2">
-                        <span className="text-red-400 font-bold block text-[9px] mb-0.5 uppercase tracking-wider">− Negative Charge</span>
+                        <span className="text-red-400 font-bold block text-[9px] mb-0.5 uppercase tracking-wider">− The Argument Against</span>
                         <p className="text-slate-200">{meaning.dialectical_debate.negative_counter_idea}</p>
                       </div>
                     </div>
@@ -278,7 +278,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
               {/* Section label + nav */}
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[9px] text-orange-400 tracking-widest uppercase font-bold">
-                  Character Profiles & Audio Telemetry
+                  Characters & Voice Settings
                 </span>
                 {characters.length > 1 && (
                   <div className="flex items-center gap-1.5">
@@ -341,19 +341,19 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                       <div className="bg-black/40 p-3 rounded-xl border border-white/8 space-y-2">
                         <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-200 uppercase font-bold tracking-wider">
                           <Fingerprint className="w-3 h-3 text-orange-400" />
-                          Casting Guide
+                          Voice Casting
                         </div>
                         <div className="space-y-1.5">
                           <div>
-                            <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Sonic Anchor</span>
+                            <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Voice Reference</span>
                             <span className="text-slate-100 text-[10px]">{char.audio.voice_identity.sonic_anchor}</span>
                           </div>
                           <div className="border-t border-white/8 pt-1.5">
-                            <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Timbre</span>
+                            <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Vocal Tone</span>
                             <span className="text-slate-200 italic text-[10px]">"{char.audio.performance_styling.timbre}"</span>
                           </div>
                           <div>
-                            <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Tempo</span>
+                            <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Speaking Pace</span>
                             <span className="text-slate-200 italic text-[10px]">{char.audio.performance_styling.tempo}</span>
                           </div>
                         </div>
@@ -407,9 +407,9 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                     {/* Kinetics — 3 columns */}
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { label: "Gait & Posture", value: char.kinetics.posture },
-                        { label: "Physical Tics", value: char.kinetics.gesture_vocabulary },
-                        { label: "Response Latency", value: char.kinetics.reaction_tempo, highlight: true },
+                        { label: "How They Carry Themselves", value: char.kinetics.posture },
+                        { label: "Nervous Habits", value: char.kinetics.gesture_vocabulary },
+                        { label: "How They React", value: char.kinetics.reaction_tempo, highlight: true },
                       ].map(({ label, value, highlight }) => (
                         <div key={label} className="bg-white/5 p-2 rounded-lg border border-white/8">
                           <span className="text-slate-500 font-mono text-[8px] uppercase tracking-wider block mb-0.5">{label}</span>
@@ -423,12 +423,12 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                     {/* Psychology — 2 columns */}
                     <div className="grid grid-cols-2 gap-2 bg-black/40 p-3 rounded-xl border border-white/8">
                       <div>
-                        <span className="text-slate-500 block font-mono uppercase text-[8px] tracking-wider mb-0.5">Core & Personal</span>
+                        <span className="text-slate-500 block font-mono uppercase text-[8px] tracking-wider mb-0.5">Outer Personality</span>
                         <p className="text-white font-semibold text-[10px] leading-snug">{char.psychology.social}</p>
                         <p className="text-slate-400 text-[9px] mt-0.5 leading-snug">{char.psychology.core}</p>
                       </div>
                       <div>
-                        <span className="text-orange-400 block font-mono uppercase text-[8px] tracking-wider mb-0.5">Hidden Trauma</span>
+                        <span className="text-orange-400 block font-mono uppercase text-[8px] tracking-wider mb-0.5">What They're Hiding</span>
                         <p className="text-orange-300 font-semibold text-[10px] leading-snug">{char.psychology.hidden}</p>
                         <p className="text-slate-400 text-[9px] mt-0.5 leading-snug">{char.psychology.personal}</p>
                       </div>
@@ -442,7 +442,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                       >
                         <span className="flex items-center gap-1.5 font-mono text-[9px] text-slate-200 uppercase font-bold tracking-wider">
                           <Sparkles className="w-3 h-3 text-orange-400" />
-                          Style Lock & Prompting Spec (Visuals)
+                          Visual Style Guide
                         </span>
                         <span className="text-orange-400 font-mono text-[9px] font-bold">
                           {expandedVisualsCharId === char.id ? "[ Hide ]" : "[ Expand ]"}
@@ -452,20 +452,20 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                       {expandedVisualsCharId === char.id && (
                         <div className="p-3 border-t border-white/8 bg-black/50 space-y-3 text-[11px] leading-relaxed">
                           <div>
-                            <span className="text-slate-500 block uppercase font-mono text-[9px] tracking-wider mb-1">Material & Lighting Textures</span>
+                            <span className="text-slate-500 block uppercase font-mono text-[9px] tracking-wider mb-1">Lighting & Texture Style</span>
                             <div className="text-slate-100 p-2.5 rounded bg-black/60 border border-white/8 italic">
                               "{char.visuals.material_texture}"
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <span className="text-slate-500 block uppercase font-mono text-[9px] tracking-wider mb-1">Outer Mask Wardrobe</span>
+                              <span className="text-slate-500 block uppercase font-mono text-[9px] tracking-wider mb-1">Wardrobe — Outer Mask</span>
                               <div className="text-slate-200 p-2 rounded bg-black/40 border border-white/8 text-[10px]">
                                 {char.visuals.wardrobe.outer_mask}
                               </div>
                             </div>
                             <div>
-                              <span className="text-slate-500 block uppercase font-mono text-[9px] tracking-wider mb-1">Inner Vulnerability</span>
+                              <span className="text-slate-500 block uppercase font-mono text-[9px] tracking-wider mb-1">Wardrobe — Inner Vulnerability</span>
                               <div className="text-slate-300 p-2 rounded bg-black/40 border border-white/8 text-[10px] italic">
                                 {char.visuals.wardrobe.inner_vulnerability}
                               </div>
@@ -473,7 +473,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                           </div>
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-orange-400 font-mono text-[9px] uppercase tracking-wider font-bold">Midjourney Master Grid Prompt</span>
+                              <span className="text-orange-400 font-mono text-[9px] uppercase tracking-wider font-bold">Image Generation Prompt</span>
                               <button
                                 onClick={() => {
                                   const txt = char.prompts?.master_visual_reference?.master_grid_prompt || "";
