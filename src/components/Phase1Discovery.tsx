@@ -156,9 +156,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2 }}
-          className={`rounded-2xl border p-4 bg-gradient-to-br from-[#0c0c10] to-[#08080a] shadow-2xl ${
-            isSelected ? "border-orange-500/80" : "border-white/15"
-          }`}
+          className="rounded-2xl border border-orange-500/70 p-4 bg-gradient-to-br from-[#0c0c10] to-[#08080a] shadow-2xl"
         >
           {/* Card Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/8 pb-3 mb-4">
