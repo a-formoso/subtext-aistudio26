@@ -12,9 +12,10 @@ interface Phase1DiscoveryProps {
   onSelectOption: (option: StoryOption) => void;
   onLockOption: (option: StoryOption) => void;
   selectedOptionId?: number;
+  lockedOptionId?: number;
 }
 
-export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId }: Phase1DiscoveryProps) {
+export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId, lockedOptionId }: Phase1DiscoveryProps) {
   const [premise, setPremise] = useState(
     "What if a high-ranking corporate saboteur is forced to execute a quiet chemical poisoning during a high-stakes dinner inside a smart, hermetic greenhouse that visually manifests human stress hormones?"
   );
@@ -65,7 +66,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
 
   const opt = options.find((o) => o.option_id === activeOptionId) || options[0];
   if (!opt) return null;
-  const isSelected = selectedOptionId === opt.option_id;
+  const isSelected = lockedOptionId === opt.option_id;
   const setting = getStorySetting(opt);
   const meaning = getStoryMeaning(opt);
   const characters = getStoryCharacters(opt);

@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from "motion/react";
 export default function App() {
   const [activePhase, setActivePhase] = useState<1 | 2 | 3>(1);
   const [selectedOption, setSelectedOption] = useState<StoryOption>(PRESEEDED_OPTIONS[0]);
+  const [lockedOptionId, setLockedOptionId] = useState<number>(PRESEEDED_OPTIONS[0].option_id);
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint>(PRESEEDED_BLUEPRINT);
   const [scriptText, setScriptText] = useState<string>(PRESEEDED_SCRIPT);
 
@@ -251,6 +252,7 @@ export default function App() {
 
   const handleLockOption = (option: StoryOption) => {
     handleSelectOption(option);
+    setLockedOptionId(option.option_id);
     setActivePhase(2);
   };
 
@@ -391,6 +393,7 @@ export default function App() {
                       onSelectOption={handleSelectOption}
                       onLockOption={handleLockOption}
                       selectedOptionId={selectedOption?.option_id}
+                      lockedOptionId={lockedOptionId}
                     />
                   )}
 
