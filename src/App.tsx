@@ -247,6 +247,10 @@ export default function App() {
     }
 
     setSelectedBlueprint(matchedBlueprint);
+  };
+
+  const handleLockOption = (option: StoryOption) => {
+    handleSelectOption(option);
     setActivePhase(2);
   };
 
@@ -385,6 +389,7 @@ export default function App() {
                   {activePhase === 1 && (
                     <Phase1Discovery
                       onSelectOption={handleSelectOption}
+                      onLockOption={handleLockOption}
                       selectedOptionId={selectedOption?.option_id}
                     />
                   )}

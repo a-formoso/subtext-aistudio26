@@ -10,10 +10,11 @@ import { getStorySetting, getStoryMeaning, getStoryCharacters } from "../utils/s
 
 interface Phase1DiscoveryProps {
   onSelectOption: (option: StoryOption) => void;
+  onLockOption: (option: StoryOption) => void;
   selectedOptionId?: number;
 }
 
-export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1DiscoveryProps) {
+export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId }: Phase1DiscoveryProps) {
   const [premise, setPremise] = useState(
     "What if a high-ranking corporate saboteur is forced to execute a quiet chemical poisoning during a high-stakes dinner inside a smart, hermetic greenhouse that visually manifests human stress hormones?"
   );
@@ -174,7 +175,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
 
             {/* ── Primary CTA ── */}
             <button
-              onClick={() => onSelectOption(opt)}
+              onClick={() => onLockOption(opt)}
               className={`flex items-center gap-2 py-2 px-5 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer shrink-0 shadow-md ${
                 isSelected
                   ? "bg-orange-600 hover:bg-orange-500 text-white shadow-orange-950/40"
