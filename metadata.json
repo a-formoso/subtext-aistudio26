@@ -1,0 +1,6 @@
+{
+  "name": "Infinite Studio",
+  "description": "Interactive Hollywood screenwriting playbook, pre-production blueprint and screenplay generator platform for stress-manifesting smart-greenhouse thrillers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
