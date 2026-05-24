@@ -260,12 +260,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#08080a] text-gray-200 flex flex-col font-sans select-text">
+    <div className="h-screen overflow-hidden bg-[#08080a] text-gray-200 flex flex-col font-sans select-text">
       {/* Decorative clean background mesh inside workspace */}
       <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-orange-950/5 to-transparent pointer-events-none z-0" />
 
       {/* Main Container Frame - Immersive layout with precise border styling */}
-      <div className="w-full max-w-7xl mx-auto my-4 sm:my-8 bg-[#08080a] border border-white/10 rounded-2xl flex flex-col shadow-[0_24px_64px_-12px_rgba(0,0,0,0.8)] z-10 relative overflow-hidden min-h-[850px]">
+      <div className="w-full max-w-7xl mx-auto my-3 bg-[#08080a] border border-white/10 rounded-2xl flex flex-col shadow-[0_24px_64px_-12px_rgba(0,0,0,0.8)] z-10 relative overflow-hidden" style={{ height: "calc(100vh - 24px)" }}>
         
         {/* Top Navigation Header */}
         <nav className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-black/40 backdrop-blur-md shrink-0">
