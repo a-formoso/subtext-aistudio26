@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 type VoidFunction = () => void;
 import { StoryOption } from "../types";
 import { PRESEEDED_OPTIONS } from "../preseededData";
-import { Sparkles, ArrowRight, HelpCircle, Edit3, CheckCircle, Volume2, Fingerprint, Sliders, PlayCircle, Copy } from "lucide-react";
+import { Sparkles, ArrowRight, HelpCircle, Edit3, CheckCircle, Volume2, Fingerprint, Sliders, PlayCircle, Copy, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 import { getStorySetting, getStoryMeaning, getStoryCharacters } from "../utils/schemaConverter";
 
@@ -25,6 +25,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
   const [playingMonologueCharId, setPlayingMonologueCharId] = useState<string | null>(null);
   const [expandedVisualsCharId, setExpandedVisualsCharId] = useState<string | null>(null);
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null);
+  const [activeCharIndex, setActiveCharIndex] = useState<number>(0);
 
   useEffect(() => {
     if (selectedOptionId) {
@@ -254,8 +255,49 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                     3D virtual production character profiles & audio telemetry
                   </span>
 
+                  {/* Character carousel nav */}
+                  {characters.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setActiveCharIndex((i) => Math.max(0, i - 1))}
+                        disabled={activeCharIndex === 0}
+                        className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4 text-slate-300" />
+                      </button>
+                      <div className="flex items-center gap-1.5 flex-1">
+                        {characters.map((c, i) => (
+                          <button
+                            key={c.id}
+                            onClick={() => setActiveCharIndex(i)}
+                            className={`flex-1 px-2 py-1.5 rounded-lg font-mono text-[10px] font-bold truncate transition-all cursor-pointer border ${
+                              activeCharIndex === i
+                                ? "bg-orange-600 border-orange-500 text-white"
+                                : "bg-black/40 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20"
+                            }`}
+                          >
+                            {c.identity.name || `Character ${i + 1}`}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setActiveCharIndex((i) => Math.min(characters.length - 1, i + 1))}
+                        disabled={activeCharIndex === characters.length - 1}
+                        className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4 text-slate-300" />
+                      </button>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 gap-6">
-                    {characters.map((char) => (
+                    {characters.filter((_, i) => i === activeCharIndex).map((char) => (
+                      <motion.div
+                        key={char.id}
+                        initial={{ opacity: 0, x: 16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
                       <div key={char.id} className="bg-black/50 p-5 rounded-2xl border border-white/10 flex flex-col justify-between text-xs space-y-4">
                         
                         {/* Title Section */}
@@ -508,6 +550,7 @@ export function Phase1Discovery({ onSelectOption, selectedOptionId }: Phase1Disc
                         </div>
 
                       </div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
