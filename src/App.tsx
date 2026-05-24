@@ -470,7 +470,7 @@ export default function App() {
                   </span>
                 </div>
                 
-                <div className="p-4 overflow-auto max-h-[280px] font-mono text-[10px] text-emerald-500/80 leading-snug">
+                <div className="p-4 overflow-auto font-mono text-[10px] text-emerald-500/80 leading-snug">
                   <pre className="whitespace-pre-wrap select-text selection:bg-emerald-950">
                     {JSON.stringify({
                       option_id: selectedOption?.option_id || 1,
