@@ -162,7 +162,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/8 pb-3 mb-4">
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 border border-white/15 text-slate-300">
-                Direction 0{opt.option_id}
+                Option 0{opt.option_id}
               </span>
               {isSelected && (
                 <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-mono font-bold uppercase">
@@ -330,7 +330,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                         <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest block mb-0.5">{char.identity.cast_orbit}</span>
                         <span className="font-bold text-white text-sm tracking-tight">{char.identity.name}</span>
                       </div>
-                      <span className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-orange-950/40 text-orange-300 border border-orange-800/50 uppercase font-bold">
+                      <span className="text-[9px] font-mono px-2.5 py-1 rounded bg-white/5 border border-white/15 text-slate-400 uppercase tracking-widest">
                         {char.identity.archetype}
                       </span>
                     </div>
