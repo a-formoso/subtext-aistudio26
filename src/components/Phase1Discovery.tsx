@@ -438,13 +438,21 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                     <div className="bg-black/30 border border-white/8 rounded-xl overflow-hidden">
                       <button
                         onClick={() => setExpandedVisualsCharId(expandedVisualsCharId === char.id ? null : char.id)}
-                        className="w-full flex items-center justify-between p-2.5 hover:bg-white/5 transition-colors text-left"
+                        className={`w-full flex items-center justify-between p-2.5 transition-colors text-left ${
+                          expandedVisualsCharId === char.id
+                            ? "bg-orange-600 hover:bg-orange-500"
+                            : "hover:bg-white/5"
+                        }`}
                       >
-                        <span className="flex items-center gap-1.5 font-mono text-[9px] text-slate-200 uppercase font-bold tracking-wider">
-                          <Sparkles className="w-3 h-3 text-slate-400" />
+                        <span className={`flex items-center gap-1.5 font-mono text-[9px] uppercase font-bold tracking-wider ${
+                          expandedVisualsCharId === char.id ? "text-white" : "text-slate-200"
+                        }`}>
+                          <Sparkles className={`w-3 h-3 ${expandedVisualsCharId === char.id ? "text-white" : "text-slate-400"}`} />
                           Visual Style Guide
                         </span>
-                        <span className="text-slate-400 font-mono text-[9px] font-bold">
+                        <span className={`font-mono text-[9px] font-bold ${
+                          expandedVisualsCharId === char.id ? "text-white" : "text-slate-400"
+                        }`}>
                           {expandedVisualsCharId === char.id ? "[ Hide ]" : "[ Expand ]"}
                         </span>
                       </button>
