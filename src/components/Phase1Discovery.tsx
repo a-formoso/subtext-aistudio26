@@ -201,7 +201,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                       i > 0 ? "border-l border-white/10" : ""
                     } ${
                       leftTab === tab
-                        ? "bg-orange-600 text-white"
+                        ? "bg-white/15 text-white"
                         : "text-slate-300 hover:text-white hover:bg-white/5"
                     }`}
                   >
@@ -295,7 +295,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                         onClick={() => setActiveCharIndex(i)}
                         className={`px-2.5 py-1 rounded font-mono text-[10px] font-bold transition-all cursor-pointer border ${
                           activeCharIndex === i
-                            ? "bg-orange-600 border-orange-500 text-white"
+                            ? "bg-white/15 border-white/25 text-white"
                             : "bg-black/50 border-white/15 text-slate-300 hover:text-white hover:border-white/30"
                         }`}
                       >
@@ -397,7 +397,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                       </div>
                       <button
                         onClick={() => setPlayingMonologueCharId(playingMonologueCharId === char.id ? null : char.id)}
-                        className="shrink-0 px-2.5 py-1 text-[9px] font-mono font-bold bg-orange-600 hover:bg-orange-500 text-white rounded flex items-center gap-1.5 cursor-pointer transition-colors"
+                        className="shrink-0 px-2.5 py-1 text-[9px] font-mono font-bold bg-white/10 hover:bg-white/20 border border-white/20 text-slate-200 hover:text-white rounded flex items-center gap-1.5 cursor-pointer transition-colors"
                       >
                         <Volume2 className="w-3 h-3" />
                         {playingMonologueCharId === char.id ? "Pause" : "Simulate"}
@@ -440,19 +440,15 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                         onClick={() => setExpandedVisualsCharId(expandedVisualsCharId === char.id ? null : char.id)}
                         className={`w-full flex items-center justify-between p-2.5 transition-colors text-left ${
                           expandedVisualsCharId === char.id
-                            ? "bg-orange-600 hover:bg-orange-500"
+                            ? "bg-white/15 hover:bg-white/20"
                             : "hover:bg-white/5"
                         }`}
                       >
-                        <span className={`flex items-center gap-1.5 font-mono text-[9px] uppercase font-bold tracking-wider ${
-                          expandedVisualsCharId === char.id ? "text-white" : "text-slate-200"
-                        }`}>
-                          <Sparkles className={`w-3 h-3 ${expandedVisualsCharId === char.id ? "text-white" : "text-slate-400"}`} />
+                        <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase font-bold tracking-wider text-slate-200">
+                          <Sparkles className="w-3 h-3 text-slate-400" />
                           Visual Style Guide
                         </span>
-                        <span className={`font-mono text-[9px] font-bold ${
-                          expandedVisualsCharId === char.id ? "text-white" : "text-slate-400"
-                        }`}>
+                        <span className="font-mono text-[9px] font-bold text-slate-400">
                           {expandedVisualsCharId === char.id ? "[ Hide ]" : "[ Expand ]"}
                         </span>
                       </button>
