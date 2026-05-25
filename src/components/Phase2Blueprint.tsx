@@ -3,15 +3,13 @@ import { StoryOption, Blueprint, BeatSheet, SubtextualBeat, Sequence } from "../
 import { PRESEEDED_BLUEPRINT } from "../preseededData";
 import { GreenhouseVisualizer } from "./GreenhouseVisualizer";
 import {
-  Sparkles, ArrowRight, Music, Volume2, Film, Palette,
-  ChevronLeft, ChevronRight, Activity, Layers
+  Sparkles, ArrowRight, ChevronLeft, ChevronRight,
+  Volume2, Film, Palette, Music, CheckCircle
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import {
-  getBlueprintSequences,
-  getBlueprintBeats,
-  getBlueprintLogline,
-  getStoryCharacters,
-  getStoryMeaning
+  getBlueprintSequences, getBlueprintBeats, getBlueprintLogline,
+  getStoryCharacters, getStoryMeaning
 } from "../utils/schemaConverter";
 
 interface Phase2BlueprintProps {
@@ -20,157 +18,172 @@ interface Phase2BlueprintProps {
   selectedBlueprint?: Blueprint;
 }
 
+type RightView = "sequences" | "scenes" | "beats";
+
 function makeShotId(seqId: string, seqGlobalIdx: number, sceneNum: number, beatNum: number) {
-  const actMatch = seqId.match(/^A(\d+)/);
-  const actNum = actMatch ? actMatch[1] : "1";
+  const actNum = seqId.match(/^A(\d+)/)?.[1] ?? "1";
   return `A${actNum}_Q${seqGlobalIdx}_S${sceneNum}_B${beatNum}`;
 }
 
-const ACT_LABELS = ["ACT I", "ACT II", "ACT III"];
-const ACT_SUBTITLES = ["The Initiation", "The Confrontation", "The Resolution"];
-const ACT_COLORS: Record<number, { badge: string; dot: string; text: string }> = {
-  0: { badge: "text-blue-400 bg-blue-950/40 border-blue-800/50", dot: "bg-blue-500", text: "text-blue-400" },
-  1: { badge: "text-amber-400 bg-amber-950/40 border-amber-800/50", dot: "bg-amber-500", text: "text-amber-400" },
-  2: { badge: "text-red-400 bg-red-950/40 border-red-800/50", dot: "bg-red-500", text: "text-red-400" },
-};
+const ACT_LABELS  = ["ACT I",   "ACT II",       "ACT III"];
+const ACT_COLORS  = [
+  { tab: "text-blue-400",  badge: "text-blue-400 bg-blue-950/40 border-blue-800/50" },
+  { tab: "text-amber-400", badge: "text-amber-400 bg-amber-950/40 border-amber-800/50" },
+  { tab: "text-red-400",   badge: "text-red-400 bg-red-950/40 border-red-800/50" },
+];
 
 export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBlueprint }: Phase2BlueprintProps) {
-  const [blueprint, setBlueprint] = useState<Blueprint>(selectedBlueprint || PRESEEDED_BLUEPRINT);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorInfo, setErrorInfo] = useState<string | null>(null);
-  const [activeActIdx, setActiveActIdx] = useState(0);
-  const [selectedSceneNumber, setSelectedSceneNumber] = useState(1);
-  const [activeBeatIndex, setActiveBeatIndex] = useState(0);
+  const [blueprint, setBlueprint]         = useState<Blueprint>(selectedBlueprint || PRESEEDED_BLUEPRINT);
+  const [isLoading, setIsLoading]         = useState(false);
+  const [errorInfo, setErrorInfo]         = useState<string | null>(null);
+
+  // Navigation state
+  const [activeActIdx, setActiveActIdx]   = useState(0);
+  const [rightView, setRightView]         = useState<RightView>("sequences");
+  const [activeSeqId,  setActiveSeqId]    = useState<string | null>(null);
+  const [activeSceneNum, setActiveSceneNum] = useState<number | null>(null);
+  const [activeBeatIdx, setActiveBeatIdx] = useState(0);
 
   const handleGenerateBlueprint = async () => {
     if (!chosenOption) return;
-    setIsLoading(true);
-    setErrorInfo(null);
+    setIsLoading(true); setErrorInfo(null);
     try {
       const resp = await fetch("/api/generate-phase2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chosenOption }),
       });
       const data = await resp.json();
       if (data.success && data.blueprint) {
-        setBlueprint(data.blueprint);
-        onSelectBlueprint(data.blueprint);
-        setActiveActIdx(0);
-        setSelectedSceneNumber(1);
-        setActiveBeatIndex(0);
+        setBlueprint(data.blueprint); onSelectBlueprint(data.blueprint);
+        resetNav();
       } else {
-        setErrorInfo(data.message || "Could not generate blueprint. Rendering preseeded data.");
-        setBlueprint(PRESEEDED_BLUEPRINT);
-        onSelectBlueprint(PRESEEDED_BLUEPRINT);
+        setErrorInfo(data.message || "Could not generate. Rendering preseeded data.");
+        setBlueprint(PRESEEDED_BLUEPRINT); onSelectBlueprint(PRESEEDED_BLUEPRINT);
       }
     } catch {
-      setErrorInfo("Gemini endpoint unreachable. Rendered preseeded structural maps.");
-      setBlueprint(PRESEEDED_BLUEPRINT);
-      onSelectBlueprint(PRESEEDED_BLUEPRINT);
-    } finally {
-      setIsLoading(false);
-    }
+      setErrorInfo("Gemini endpoint unreachable. Rendered preseeded maps.");
+      setBlueprint(PRESEEDED_BLUEPRINT); onSelectBlueprint(PRESEEDED_BLUEPRINT);
+    } finally { setIsLoading(false); }
+  };
+
+  const resetNav = () => {
+    setRightView("sequences"); setActiveSeqId(null);
+    setActiveSceneNum(null); setActiveBeatIdx(0);
   };
 
   useEffect(() => {
     if (chosenOption && chosenOption.title !== blueprint.title) {
-      setBlueprint({
-        ...PRESEEDED_BLUEPRINT,
-        title: chosenOption.title,
-        setting: chosenOption.setting,
-        meaning: chosenOption.meaning,
-        characters: chosenOption.characters,
-      });
+      setBlueprint({ ...PRESEEDED_BLUEPRINT, title: chosenOption.title,
+        setting: chosenOption.setting, meaning: chosenOption.meaning, characters: chosenOption.characters });
     }
   }, [chosenOption]);
 
   const convertedSequences = getBlueprintSequences(blueprint);
-  const convertedBeats = getBlueprintBeats(blueprint);
-  const mappedLogline = getBlueprintLogline(blueprint);
-  const characterProfiles = getStoryCharacters(blueprint as any);
-  const meaning = getStoryMeaning(blueprint as any);
+  const convertedBeats     = getBlueprintBeats(blueprint);
+  const logline            = getBlueprintLogline(blueprint);
+  const characters         = getStoryCharacters(blueprint as any);
+  const meaning            = getStoryMeaning(blueprint as any);
 
-  const actOneSeqs = convertedSequences.act_one_sequences || [];
-  const actTwoSeqs = convertedSequences.act_two_sequences || [];
-  const actThreeSeqs = convertedSequences.act_three_sequences || [];
-
-  type SequenceWithMeta = Sequence & { actNum: number; globalIdx: number; actIdx: number };
-
-  const allSequences: SequenceWithMeta[] = [
-    ...actOneSeqs.map((s, i) => ({ ...s, actNum: 1, globalIdx: i + 1, actIdx: 0 })),
-    ...actTwoSeqs.map((s, i) => ({ ...s, actNum: 2, globalIdx: actOneSeqs.length + i + 1, actIdx: 1 })),
-    ...actThreeSeqs.map((s, i) => ({ ...s, actNum: 3, globalIdx: actOneSeqs.length + actTwoSeqs.length + i + 1, actIdx: 2 })),
+  type SequenceWithMeta = Sequence & { actIdx: number; globalIdx: number };
+  const actSeqArrays = [
+    convertedSequences.act_one_sequences  || [],
+    convertedSequences.act_two_sequences  || [],
+    convertedSequences.act_three_sequences || [],
   ];
+  const allSequences: SequenceWithMeta[] = actSeqArrays.flatMap((arr, ai) =>
+    arr.map((s, i) => ({
+      ...s, actIdx: ai,
+      globalIdx: actSeqArrays.slice(0, ai).reduce((a, b) => a + b.length, 0) + i + 1
+    }))
+  );
 
-  // Sequences visible for the currently selected act
-  const visibleSequences = allSequences.filter(s => s.actIdx === activeActIdx);
-  const totalActs = [actOneSeqs, actTwoSeqs, actThreeSeqs].filter(a => a.length > 0).length || 3;
+  // Sequences visible for the active act tab
+  const actSequences = allSequences.filter(s => s.actIdx === activeActIdx);
 
-  const switchAct = (nextIdx: number) => {
-    const clamped = Math.max(0, Math.min(totalActs - 1, nextIdx));
-    setActiveActIdx(clamped);
-    // Auto-select first scene of new act
-    const firstScene = allSequences.find(s => s.actIdx === clamped)?.scenes?.[0];
-    if (firstScene) {
-      setSelectedSceneNumber(firstScene.scene_number);
-      setActiveBeatIndex(0);
-    }
-  };
+  // Active sequence object
+  const activeSeq = allSequences.find(s => s.sequence_id === activeSeqId);
 
-  const activeSeq = allSequences.find(s => s.scenes?.some(sc => sc.scene_number === selectedSceneNumber));
-  const activeSceneObject = allSequences.flatMap(s => s.scenes || []).find(sc => sc.scene_number === selectedSceneNumber);
-  const activeBeatSheet: BeatSheet | undefined = convertedBeats.find(sheet => sheet.scene_number === selectedSceneNumber);
-  const activeBeats: SubtextualBeat[] = activeBeatSheet?.micro_blueprint?.subtextual_beat_progression || [];
-  const currentBeat: SubtextualBeat | undefined = activeBeats[activeBeatIndex] || activeBeats[0];
+  // Active scene
+  const activeScene = activeSeq?.scenes?.find(sc => sc.scene_number === activeSceneNum)
+    ?? activeSeq?.scenes?.[0];
+
+  // Beats
+  const beatSheet: BeatSheet | undefined = convertedBeats.find(b => b.scene_number === (activeScene?.scene_number));
+  const beats: SubtextualBeat[] = beatSheet?.micro_blueprint?.subtextual_beat_progression || [];
+  const currentBeat = beats[activeBeatIdx] ?? beats[0];
 
   const currentShotId = activeSeq && currentBeat
-    ? makeShotId(activeSeq.sequence_id, activeSeq.globalIdx, selectedSceneNumber, currentBeat.beat_number)
-    : `A${activeActIdx + 1}_Q1_S${selectedSceneNumber}_B1`;
+    ? makeShotId(activeSeq.sequence_id, activeSeq.globalIdx, activeScene!.scene_number, currentBeat.beat_number)
+    : "—";
 
-  const getBeatVocalTelemetry = () => {
+  // Stress & vocal
+  const stressMap: Record<number, number> = {1:20,2:40,3:60,4:75,5:88,6:98,7:92};
+  const stress = currentBeat ? (stressMap[currentBeat.beat_number] ?? 85) : 15;
+
+  const vocalProfile = (() => {
     if (!currentBeat) return null;
-    const textLower = (currentBeat.action || "").toLowerCase();
-    const speaker = characterProfiles.find(char =>
-      textLower.includes(char.id.toLowerCase()) ||
-      textLower.includes((char.identity.name || "").toLowerCase().split(" ")[0])
-    ) || characterProfiles[0];
+    const text = (currentBeat.action || "").toLowerCase();
+    const speaker = characters.find(c =>
+      text.includes(c.id.toLowerCase()) || text.includes((c.identity.name || "").toLowerCase().split(" ")[0])
+    ) ?? characters[0];
     if (!speaker) return null;
-    const vocalStateKey = (currentBeat.vocal_state || "neutral_state") as "neutral_state" | "tension_state" | "panic_state";
-    const baseState = speaker.audio.state_telemetry[vocalStateKey] || speaker.audio.state_telemetry.neutral_state;
+    const key = (currentBeat.vocal_state || "neutral_state") as "neutral_state"|"tension_state"|"panic_state";
+    const state = speaker.audio.state_telemetry[key] ?? speaker.audio.state_telemetry.neutral_state;
     return {
-      characterName: speaker.identity.name,
-      stateLabel: vocalStateKey.replace("_state", "").toUpperCase(),
-      stability: baseState.stability,
-      style_exaggeration: (baseState as any).style_exaggeration || 15,
-      stress_cues: baseState.stress_cues,
+      name: speaker.identity.name,
+      label: key.replace("_state","").toUpperCase(),
+      stability: state.stability,
+      style: (state as any).style_exaggeration ?? 15,
+      stress_cues: state.stress_cues,
       framing: speaker.cinematics?.framing || "Macro Close-Up",
-      colorPalette: speaker.cinematics?.color_palette || ["#111111", "#ea580c"],
+      palette: speaker.cinematics?.color_palette || [],
     };
+  })();
+
+  // ── Helpers ───────────────────────────────────────────────────────
+  const selectAct = (idx: number) => {
+    setActiveActIdx(idx); resetNav();
   };
 
-  const activeVocalTelemetry = getBeatVocalTelemetry();
-  const getDynamicStress = (beatNo?: number) => {
-    const map: Record<number, number> = { 1: 20, 2: 40, 3: 60, 4: 75, 5: 88, 6: 98, 7: 92 };
-    return beatNo ? (map[beatNo] ?? 85) : 15;
+  const selectSeq = (id: string) => {
+    setActiveSeqId(id);
+    const firstScene = allSequences.find(s => s.sequence_id === id)?.scenes?.[0];
+    setActiveSceneNum(firstScene?.scene_number ?? null);
+    setActiveBeatIdx(0);
+    setRightView("scenes");
   };
-  const stressPercentage = currentBeat ? getDynamicStress(currentBeat.beat_number) : 15;
-  const colors = ACT_COLORS[activeActIdx] || ACT_COLORS[0];
+
+  const selectScene = (num: number) => {
+    setActiveSceneNum(num); setActiveBeatIdx(0); setRightView("beats");
+  };
+
+  const goBack = () => {
+    if (rightView === "beats")    { setRightView("scenes"); }
+    else if (rightView === "scenes") { setRightView("sequences"); setActiveSeqId(null); }
+  };
+
+  // ── Breadcrumb label ──────────────────────────────────────────────
+  const breadcrumb = [
+    ACT_LABELS[activeActIdx],
+    activeSeqId ?? null,
+    rightView === "scenes" || rightView === "beats" ? (activeScene ? `Scene ${activeScene.scene_number}` : null) : null,
+    rightView === "beats" && currentBeat ? `Beat ${currentBeat.beat_number}` : null,
+  ].filter(Boolean).join(" › ");
+
+  const colors = ACT_COLORS[activeActIdx];
 
   return (
-    <div className="flex flex-col gap-4" style={{ height: "calc(100vh - 140px)", minHeight: 0 }}>
+    <div className="space-y-5">
 
-      {/* ── Control Bar ── */}
-      <div className="flex items-center justify-between gap-4 shrink-0">
-        <div className="min-w-0">
-          <span className="font-mono text-[9px] tracking-widest text-orange-500 uppercase font-bold">Phase 2 — Narrative Deconstruction</span>
-          <h2 className="text-base font-sans font-semibold text-slate-100 truncate">"{blueprint.title}"</h2>
-          <p className="text-[10px] text-slate-500 font-mono truncate">{mappedLogline}</p>
+      {/* ── Control bar (above card, mirrors Phase 1 section header) ── */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <span className="font-mono text-[10px] tracking-widest text-orange-500 uppercase font-bold">Phase 2 — Narrative Deconstruction</span>
+          <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate max-w-lg">{logline}</p>
         </div>
         <button
-          onClick={handleGenerateBlueprint}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-xs text-white font-mono font-bold transition-all cursor-pointer shrink-0"
+          onClick={handleGenerateBlueprint} disabled={isLoading}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-xs text-white font-mono font-bold transition-all cursor-pointer shrink-0"
         >
           <Sparkles className="w-3.5 h-3.5" />
           {isLoading ? "Compiling..." : "Expand with Gemini AI"}
@@ -178,431 +191,449 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
       </div>
 
       {errorInfo && (
-        <div className="shrink-0 p-2.5 rounded-lg border border-yellow-900/30 bg-yellow-950/25 text-yellow-500 text-[10px] font-mono">
+        <div className="p-2.5 rounded-lg border border-yellow-900/30 bg-yellow-950/25 text-yellow-500 text-[10px] font-mono">
           {errorInfo}
         </div>
       )}
 
-      {/* ── 4-Panel Main Grid ── */}
-      <div className="grid grid-cols-[200px_1fr_1fr_240px] gap-4 min-h-0 flex-1">
+      {/* ══ MAIN CARD — mirrors Phase 1 option card exactly ══════════════ */}
+      <div className="rounded-2xl border border-orange-500/70 p-4 bg-gradient-to-br from-[#0c0c10] to-[#08080a] shadow-2xl">
 
-        {/* ── PANEL 1: Act Stepper + Scene List ── */}
-        <div className="flex flex-col gap-3 min-h-0">
-
-          {/* Story cosmology — fixed summary */}
-          <div className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
-            <div className="flex items-center gap-1.5">
-              <Layers className="w-3 h-3 text-slate-500" />
-              <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 font-bold">Story & Cosmology</span>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-start gap-1.5 text-[10px]">
-                <span className="font-mono text-emerald-500 shrink-0 font-bold">+</span>
-                <span className="text-slate-400 leading-tight">{meaning?.dialectical_debate?.positive_idea || "Institutional duty"}</span>
-              </div>
-              <div className="flex items-start gap-1.5 text-[10px]">
-                <span className="font-mono text-red-500 shrink-0 font-bold">—</span>
-                <span className="text-slate-400 leading-tight">{meaning?.dialectical_debate?.negative_counter_idea || "Personal liberation"}</span>
-              </div>
-            </div>
+        {/* Card header */}
+        <div className="flex items-center justify-between gap-3 border-b border-white/8 pb-3 mb-4">
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 border border-white/15 text-slate-300 shrink-0">
+              Phase 02
+            </span>
+            <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-mono font-bold uppercase shrink-0">
+              <CheckCircle className="w-3 h-3" /> Blueprint Active
+            </span>
+            <h4 className="font-sans text-lg font-bold text-white tracking-tight truncate">
+              {blueprint.title}
+            </h4>
           </div>
+          <button
+            onClick={() => onSelectBlueprint(blueprint)}
+            className="flex items-center gap-2 py-2 px-5 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer shrink-0 shadow-md bg-orange-600 hover:bg-orange-500 text-white shadow-orange-950/40"
+          >
+            Assemble Screenplay
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
-          {/* Act Stepper */}
-          <div className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-3">
-            <div className="flex items-center justify-between gap-1 mb-2">
-              <button
-                onClick={() => switchAct(activeActIdx - 1)}
-                disabled={activeActIdx === 0}
-                className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="text-center flex-1 min-w-0">
-                <span className={`font-mono text-[10px] font-bold ${colors.text}`}>{ACT_LABELS[activeActIdx]}</span>
-                <p className="font-sans text-[9px] text-slate-500 truncate">{ACT_SUBTITLES[activeActIdx]}</p>
-              </div>
-              <button
-                onClick={() => switchAct(activeActIdx + 1)}
-                disabled={activeActIdx >= totalActs - 1}
-                className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            {/* Act dots */}
-            <div className="flex justify-center gap-1.5">
-              {Array.from({ length: totalActs }).map((_, i) => (
+        {/* ── Two-column body — identical grid to Phase 1 ─────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+          {/* LEFT: Act tabs + act overview */}
+          <div className="lg:col-span-4 flex flex-col gap-3">
+
+            {/* Act tabs — mirrors Setting | Meaning tabs */}
+            <div className="flex border border-white/15 rounded-lg overflow-hidden bg-black/50">
+              {ACT_LABELS.map((label, i) => (
                 <button
                   key={i}
-                  onClick={() => switchAct(i)}
-                  className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${i === activeActIdx ? colors.dot : "bg-white/15 hover:bg-white/30"}`}
-                />
+                  onClick={() => selectAct(i)}
+                  className={`flex-1 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    i > 0 ? "border-l border-white/10" : ""
+                  } ${
+                    activeActIdx === i ? "bg-white/15 text-white" : "text-slate-300 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {label}
+                </button>
               ))}
             </div>
-          </div>
 
-          {/* Scene list — scrollable */}
-          <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-white/5 flex flex-col overflow-hidden">
-            <div className="px-3 pt-3 pb-2 shrink-0 border-b border-white/8">
-              <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 font-bold">Sequences & Scenes</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-2">
-              {visibleSequences.length === 0 ? (
-                <p className="text-[10px] text-slate-600 font-mono italic p-2 text-center">Generate with Gemini AI.</p>
-              ) : (
-                visibleSequences.map(seq => (
-                  <div key={seq.sequence_id} className="space-y-1">
-                    <div className="flex items-center gap-1.5 px-1">
-                      <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${colors.badge}`}>
-                        {seq.sequence_id}
-                      </span>
-                      <span className="text-[9px] text-slate-500 truncate">{seq.title}</span>
-                    </div>
-                    {seq.scenes?.map(scene => {
-                      const isActive = selectedSceneNumber === scene.scene_number;
-                      return (
-                        <button
-                          key={scene.scene_number}
-                          onClick={() => { setSelectedSceneNumber(scene.scene_number); setActiveBeatIndex(0); }}
-                          className={`w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-mono transition-all cursor-pointer border ${
-                            isActive
-                              ? "bg-orange-950/20 border-orange-500/40 text-orange-300 font-bold"
-                              : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5"
-                          }`}
-                        >
-                          <ChevronRight className={`w-2.5 h-2.5 shrink-0 ${isActive ? "text-orange-400" : "text-slate-700"}`} />
-                          <span>S{scene.scene_number}</span>
-                          <span className="truncate font-normal text-[9px] opacity-70">{scene.setting_micro}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── PANEL 2: Scene Detail ── */}
-        <div className="flex flex-col min-h-0 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-          <div className="px-4 py-3 shrink-0 border-b border-white/8 flex items-center gap-2">
-            <Film className="w-3.5 h-3.5 text-slate-500" />
-            <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 font-bold">Level 3 — The Scene</span>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {activeSceneObject ? (
-              <>
-                {/* Scene number */}
-                <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest">Scene</span>
-                  <span className="font-mono text-3xl font-bold text-white leading-none">{activeSceneObject.scene_number}</span>
-                  {activeSeq && (
-                    <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${colors.badge}`}>
-                      {activeSeq.sequence_id}
-                    </span>
-                  )}
+            {/* Act overview content — mirrors Setting/Meaning panels */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeActIdx}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ duration: 0.15 }}
+                className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border ${colors.badge}`}>
+                    {ACT_LABELS[activeActIdx]}
+                  </span>
+                  <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest">
+                    {["The Initiation","The Confrontation","The Resolution"][activeActIdx]}
+                  </span>
                 </div>
 
-                {/* Objective */}
-                <div className="bg-black/40 rounded-lg border border-white/8 p-3">
-                  <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 block mb-1.5">Micro-Scene Objective</span>
-                  <p className="text-sm font-sans font-semibold text-white leading-snug">
-                    {activeSceneObject.scene_objective || activeBeatSheet?.micro_blueprint?.scene_objective || "Establish the dramatic frame."}
+                {/* Premise */}
+                <div className="border-t border-white/8 pt-3">
+                  <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-1">Master Premise</span>
+                  <p className="text-slate-200 text-[11px] leading-relaxed italic">
+                    "{(blueprint as any).meaning?.premise
+                      || (blueprint as any).step_3_and_4_meaning_and_props?.premise
+                      || "A quiet act of betrayal inside a living system that sees everything."}"
                   </p>
                 </div>
 
-                {/* Value shift */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-emerald-950/20 border border-emerald-900/40 rounded-lg p-3">
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-emerald-700 block mb-1">Opening (+)</span>
-                    <p className="text-xs font-mono font-bold text-emerald-300 leading-tight">
-                      {activeSceneObject.opening_value || activeBeatSheet?.micro_blueprint?.opening_value || "Hope"}
-                    </p>
+                {/* Dialectical debate */}
+                <div className="border-t border-white/8 pt-3 space-y-2">
+                  <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Dialectical Debate</span>
+                  <div className="flex items-start gap-2 text-[11px]">
+                    <span className="text-emerald-500 font-bold font-mono shrink-0">+</span>
+                    <span className="text-slate-200">{meaning?.dialectical_debate?.positive_idea || "Institutional duty"}</span>
                   </div>
-                  <div className="bg-red-950/20 border border-red-900/40 rounded-lg p-3">
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-red-700 block mb-1">Closing (—)</span>
-                    <p className="text-xs font-mono font-bold text-red-300 leading-tight">
-                      {activeSceneObject.closing_value || activeBeatSheet?.micro_blueprint?.closing_value || "Despair"}
-                    </p>
+                  <div className="flex items-start gap-2 text-[11px]">
+                    <span className="text-red-500 font-bold font-mono shrink-0">—</span>
+                    <span className="text-slate-200">{meaning?.dialectical_debate?.negative_counter_idea || "Personal liberation"}</span>
                   </div>
                 </div>
 
-                {/* Visual layout */}
-                <div className="bg-black/30 border border-white/8 rounded-lg p-3">
-                  <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 block mb-1.5">Visual Layout</span>
-                  <p className="text-[11px] text-slate-400 leading-relaxed italic">
-                    {activeSceneObject.visualDesc || activeSceneObject.narrative_action || "No atmospheric description."}
+                {/* Controlling idea */}
+                <div className="border-t border-white/8 pt-3">
+                  <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-1">Controlling Idea</span>
+                  <p className="text-slate-400 text-[10px] italic leading-relaxed">
+                    {meaning?.controlling_idea || "Sovereignty is reclaimed only when one surrenders the illusion of control."}
                   </p>
                 </div>
 
-                {/* Character agendas */}
-                <div>
-                  <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 block mb-2">Character Agendas</span>
-                  <div className="space-y-2">
-                    {characterProfiles.slice(0, 2).map((char, idx) => (
-                      <div key={char.id} className="bg-black/30 border border-white/8 rounded-lg p-2.5 flex items-start gap-2.5">
-                        <div className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${idx === 0 ? "bg-orange-500" : "bg-emerald-500"}`} />
-                        <div className="min-w-0">
-                          <span className="font-mono text-[9px] font-bold text-slate-300">{char.identity.name}</span>
-                          <p className="text-[10px] text-slate-500 leading-relaxed mt-0.5">{char.motivation?.conscious_desire || "—"}</p>
-                        </div>
-                      </div>
-                    ))}
+                {/* Sequences count for this act */}
+                <div className="border-t border-white/8 pt-3">
+                  <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-1.5">Sequences</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {actSequences.length === 0
+                      ? <span className="text-[10px] text-slate-600 italic">Generate with Gemini AI.</span>
+                      : actSequences.map(s => (
+                          <button
+                            key={s.sequence_id}
+                            onClick={() => selectSeq(s.sequence_id)}
+                            className={`font-mono text-[9px] px-2 py-0.5 rounded border transition-all cursor-pointer ${
+                              activeSeqId === s.sequence_id
+                                ? `${colors.badge} font-bold`
+                                : "border-white/15 text-slate-400 hover:text-white hover:bg-white/5"
+                            }`}
+                          >
+                            {s.sequence_id}
+                          </button>
+                        ))
+                    }
                   </div>
                 </div>
-
-                {/* Tension gauges */}
-                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/8">
-                  {[
-                    { label: "Tension", value: stressPercentage, color: "bg-orange-500" },
-                    { label: "Body Lang.", value: Math.min(100, Math.round(stressPercentage * 0.8)), color: "bg-blue-500" },
-                    { label: "Vocal", value: Math.min(100, Math.round(stressPercentage * 1.1)), color: "bg-purple-500" },
-                  ].map(g => (
-                    <div key={g.label}>
-                      <div className="flex justify-between text-[8px] font-mono text-slate-500 mb-1">
-                        <span>{g.label}</span>
-                        <span className="text-slate-300">{g.value}%</span>
-                      </div>
-                      <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
-                        <div className={`${g.color} h-full rounded-full transition-all duration-700`} style={{ width: `${g.value}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-slate-600 font-mono text-xs italic">Select a scene.</p>
-              </div>
-            )}
+              </motion.div>
+            </AnimatePresence>
           </div>
-        </div>
 
-        {/* ── PANEL 3: Beat Progression ── */}
-        <div className="flex flex-col min-h-0 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-          <div className="px-4 py-3 shrink-0 border-b border-white/8 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="w-3.5 h-3.5 text-slate-500" />
-              <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 font-bold">Level 4 — Subtextual Beats</span>
-            </div>
-            <span className="font-mono text-[9px] text-slate-600">{activeBeats.length} beats</span>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {activeBeats.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-slate-600 font-mono text-xs italic text-center">Generate with Gemini AI<br/>to expand beats.</p>
-              </div>
-            ) : (
-              activeBeats.map((beat, bIdx) => {
-                const isCurrent = activeBeatIndex === bIdx;
-                const shotId = activeSeq
-                  ? makeShotId(activeSeq.sequence_id, activeSeq.globalIdx, selectedSceneNumber, beat.beat_number)
-                  : `A${activeActIdx + 1}_Q1_S${selectedSceneNumber}_B${beat.beat_number}`;
-                return (
+          {/* RIGHT: Drill-down panel — mirrors Characters & Voice Settings */}
+          <div className="lg:col-span-8 flex flex-col gap-3">
+
+            {/* Right panel header — mirrors "CHARACTERS & VOICE SETTINGS" row */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                {rightView !== "sequences" && (
                   <button
-                    key={beat.beat_number}
-                    onClick={() => setActiveBeatIndex(bIdx)}
-                    className={`w-full text-left rounded-lg p-3 border transition-all cursor-pointer ${
-                      isCurrent
-                        ? "border-orange-500/50 bg-orange-950/15"
-                        : "border-white/8 bg-black/30 hover:bg-white/5"
-                    }`}
+                    onClick={goBack}
+                    className="flex items-center gap-1 text-[10px] font-mono text-slate-400 hover:text-white transition-colors cursor-pointer"
                   >
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className={`font-mono text-[9px] font-bold ${isCurrent ? "text-orange-400" : "text-slate-500"}`}>
-                        BEAT {beat.beat_number}
-                      </span>
-                      <span className="font-mono text-[8px] text-slate-600 bg-black/60 border border-white/8 px-1.5 py-0.5 rounded">
-                        {shotId}
-                      </span>
-                    </div>
-                    <p className="text-[11px] font-sans text-slate-200 leading-relaxed mb-2">"{beat.text}"</p>
-                    <div className="space-y-1 border-t border-white/5 pt-1.5">
-                      <div className="flex items-start gap-1.5 text-[9px] font-mono">
-                        <span className="text-orange-400 shrink-0 font-bold uppercase">
-                          {characterProfiles[0]?.identity?.name?.split(" ")[0] || "Char 1"}:
-                        </span>
-                        <span className="text-slate-400 uppercase tracking-wide leading-tight">
-                          {beat.action.split(":")[1]?.trim() || beat.action}
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-1.5 text-[9px] font-mono">
-                        <span className="text-emerald-400 shrink-0 font-bold uppercase">
-                          {characterProfiles[1]?.identity?.name?.split(" ")[0] || "Char 2"}:
-                        </span>
-                        <span className="text-slate-400 uppercase tracking-wide leading-tight">
-                          {beat.reaction.split(":")[1]?.trim() || beat.reaction}
-                        </span>
-                      </div>
-                    </div>
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
-                );
-              })
-            )}
-          </div>
-          {/* Greenhouse sits at bottom of panel */}
-          <div className="shrink-0 px-3 pb-3 border-t border-white/8 pt-3">
-            <GreenhouseVisualizer
-              stressLevel={stressPercentage}
-              activeFlora={currentBeat?.visual_flora || "Luminescent orchids in stasis."}
-              activeStatus={currentBeat?.status || "Stable resting state."}
-            />
-          </div>
-        </div>
-
-        {/* ── PANEL 4: Downstream Payload ── */}
-        <div className="flex flex-col min-h-0 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-          <div className="px-4 py-3 shrink-0 border-b border-white/8 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-              <span className="font-mono text-[8px] uppercase tracking-widest text-slate-500 font-bold">Level 5 — Shot Payload</span>
+                )}
+                <span className="font-mono text-[9px] text-slate-400 tracking-widest uppercase font-bold truncate">
+                  {rightView === "sequences" && `Sequences — ${ACT_LABELS[activeActIdx]}`}
+                  {rightView === "scenes"    && `Scenes — ${activeSeqId}`}
+                  {rightView === "beats"     && `Beats — Scene ${activeScene?.scene_number}`}
+                </span>
+              </div>
+              {/* Breadcrumb */}
+              <span className="font-mono text-[8px] text-slate-600 truncate hidden sm:block">{breadcrumb}</span>
             </div>
-            {currentBeat && (
-              <span className="font-mono text-[9px] font-bold text-orange-400">{currentShotId}</span>
-            )}
-          </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {currentBeat ? (
-              <>
-                {/* AUDIO */}
-                <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <Volume2 className="w-3 h-3 text-emerald-400" />
-                    <span className="font-mono text-[9px] text-slate-300 uppercase font-bold">Audio Payload</span>
-                    <span className="ml-auto font-mono text-[8px] text-slate-600">{currentShotId}_AUDIO</span>
-                  </div>
-                  {activeVocalTelemetry ? (
-                    <div className="space-y-1.5 text-[9px] font-mono">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Speaker</span>
-                        <span className="text-slate-200 font-bold">{activeVocalTelemetry.characterName}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>State</span>
-                        <span className={`font-bold ${activeVocalTelemetry.stateLabel === "PANIC" ? "text-red-400" : activeVocalTelemetry.stateLabel === "TENSION" ? "text-amber-400" : "text-emerald-400"}`}>
-                          {activeVocalTelemetry.stateLabel}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Stability</span>
-                        <span className="text-white">{activeVocalTelemetry.stability}%</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Style</span>
-                        <span className="text-white">{activeVocalTelemetry.style_exaggeration}%</span>
-                      </div>
-                      <p className="text-[8px] text-slate-600 italic leading-relaxed border-t border-white/5 pt-1.5">
-                        {activeVocalTelemetry.stress_cues}
-                      </p>
+            {/* ── SEQUENCES VIEW ── */}
+            <AnimatePresence mode="wait">
+              {rightView === "sequences" && (
+                <motion.div key="sequences"
+                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}
+                  className="space-y-3"
+                >
+                  {actSequences.length === 0 ? (
+                    <div className="rounded-xl bg-white/5 border border-white/10 p-8 text-center">
+                      <p className="text-slate-600 font-mono text-xs italic">No sequences yet. Expand with Gemini AI.</p>
                     </div>
                   ) : (
-                    <p className="text-[9px] text-slate-600 italic">No vocal profile available.</p>
-                  )}
-                </div>
-
-                {/* VIDEO */}
-                <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <Film className="w-3 h-3 text-blue-400" />
-                    <span className="font-mono text-[9px] text-slate-300 uppercase font-bold">Video Prompt</span>
-                    <span className="ml-auto font-mono text-[8px] text-slate-600">{currentShotId}_VIDEO</span>
-                  </div>
-                  <div className="space-y-1.5 text-[9px] font-mono">
-                    <div className="flex justify-between text-slate-400">
-                      <span>Framing</span>
-                      <span className="text-slate-200 text-right leading-tight max-w-[120px]">{activeVocalTelemetry?.framing || "Macro Close-Up"}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-400">
-                      <span>Motion</span>
-                      <span className="text-slate-200">
-                        {currentBeat.beat_number <= 2 ? "190ms delay" : currentBeat.beat_number <= 4 ? "120ms delay" : "60ms rapid cut"}
-                      </span>
-                    </div>
-                    <p className="text-[8px] text-slate-600 italic leading-relaxed border-t border-white/5 pt-1.5">
-                      {currentBeat.visual_flora}
-                    </p>
-                  </div>
-                </div>
-
-                {/* STYLE */}
-                <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <Palette className="w-3 h-3 text-purple-400" />
-                    <span className="font-mono text-[9px] text-slate-300 uppercase font-bold">Styles Palette</span>
-                    <span className="ml-auto font-mono text-[8px] text-slate-600">{currentShotId}_STYLE</span>
-                  </div>
-                  <div className="space-y-2 text-[9px] font-mono">
-                    <div className="flex justify-between text-slate-400">
-                      <span>Environment</span>
-                      <span className="text-slate-200">
-                        {stressPercentage > 70 ? "Defensive Crimson" : stressPercentage > 40 ? "Amber Warning" : "Ambient Teal"}
-                      </span>
-                    </div>
-                    {activeVocalTelemetry?.colorPalette && (
-                      <div className="flex gap-1.5 flex-wrap pt-1">
-                        {activeVocalTelemetry.colorPalette.map((hex, idx) => (
-                          <div key={idx} className="flex items-center gap-1">
-                            <div className="w-3.5 h-3.5 rounded border border-white/10" style={{ backgroundColor: hex }} />
-                            <span className="text-[8px] text-slate-600">{hex}</span>
+                    actSequences.map(seq => (
+                      <button
+                        key={seq.sequence_id}
+                        onClick={() => selectSeq(seq.sequence_id)}
+                        className="w-full text-left rounded-xl bg-white/5 border border-white/10 p-4 hover:border-white/25 hover:bg-white/8 transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border ${colors.badge}`}>
+                              {seq.sequence_id}
+                            </span>
+                            <span className="font-mono text-[9px] text-slate-500">{seq.themeFocus}</span>
                           </div>
-                        ))}
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-white transition-colors" />
+                        </div>
+                        <h5 className="text-sm font-sans font-bold text-slate-100 group-hover:text-white mb-1">{seq.title}</h5>
+                        <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{seq.dramatic_arc}</p>
+                        <div className="flex gap-1.5 mt-2 flex-wrap">
+                          {seq.scenes?.map(sc => (
+                            <span key={sc.scene_number} className="font-mono text-[8px] px-1.5 py-0.5 rounded bg-black/50 border border-white/10 text-slate-500">
+                              S{sc.scene_number}
+                            </span>
+                          ))}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </motion.div>
+              )}
+
+              {/* ── SCENES VIEW ── */}
+              {rightView === "scenes" && (
+                <motion.div key="scenes"
+                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}
+                  className="space-y-3"
+                >
+                  {/* Scene tabs — mirrors character name tabs */}
+                  {activeSeq?.scenes && activeSeq.scenes.length > 0 && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                      {activeSeq.scenes.map(sc => (
+                        <button
+                          key={sc.scene_number}
+                          onClick={() => setActiveSceneNum(sc.scene_number)}
+                          className={`px-2.5 py-1 rounded font-mono text-[10px] font-bold transition-all cursor-pointer border shrink-0 ${
+                            activeSceneNum === sc.scene_number
+                              ? "bg-white/15 border-white/25 text-white"
+                              : "bg-black/50 border-white/15 text-slate-300 hover:text-white hover:border-white/30"
+                          }`}
+                        >
+                          Scene {sc.scene_number}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Scene detail card — mirrors character detail panel */}
+                  {activeScene && (
+                    <div className="rounded-xl bg-black/50 border border-white/10 p-4 space-y-4">
+                      {/* Scene header */}
+                      <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/8">
+                        <div>
+                          <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest block mb-0.5">
+                            Micro-Scene Objective
+                          </span>
+                          <h5 className="font-bold text-white text-sm">{activeScene.scene_objective || "Establish the dramatic frame."}</h5>
+                        </div>
+                        <button
+                          onClick={() => selectScene(activeScene.scene_number)}
+                          className="flex items-center gap-1.5 font-mono text-[10px] font-bold px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-slate-200 hover:text-white hover:bg-white/15 transition-all cursor-pointer shrink-0"
+                        >
+                          Open Beats <ChevronRight className="w-3 h-3" />
+                        </button>
                       </div>
+
+                      {/* Value shift */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-emerald-950/20 border border-emerald-900/40 rounded-lg p-3">
+                          <span className="text-[8px] font-mono uppercase tracking-widest text-emerald-700 block mb-1">Opening (+)</span>
+                          <p className="text-xs font-mono font-bold text-emerald-300 leading-tight">{activeScene.opening_value || "Hope"}</p>
+                        </div>
+                        <div className="bg-red-950/20 border border-red-900/40 rounded-lg p-3">
+                          <span className="text-[8px] font-mono uppercase tracking-widest text-red-700 block mb-1">Closing (—)</span>
+                          <p className="text-xs font-mono font-bold text-red-300 leading-tight">{activeScene.closing_value || "Despair"}</p>
+                        </div>
+                      </div>
+
+                      {/* Atmospheric layout */}
+                      <div>
+                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider block mb-1">Visual Layout</span>
+                        <p className="text-[11px] text-slate-400 italic leading-relaxed">{activeScene.visualDesc || activeScene.narrative_action || "—"}</p>
+                      </div>
+
+                      {/* Character agendas */}
+                      <div>
+                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider block mb-2">Character Agendas</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {characters.slice(0, 2).map((char, idx) => (
+                            <div key={char.id} className="bg-black/40 border border-white/8 rounded-lg p-2.5 flex items-start gap-2">
+                              <div className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${idx === 0 ? "bg-orange-500" : "bg-emerald-500"}`} />
+                              <div>
+                                <span className="font-mono text-[9px] font-bold text-slate-300 block">{char.identity.name}</span>
+                                <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{char.motivation?.conscious_desire || "—"}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* ── BEATS VIEW ── */}
+              {rightView === "beats" && (
+                <motion.div key="beats"
+                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-3"
+                >
+                  {/* Beat list — left column */}
+                  <div className="space-y-2">
+                    <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest block">Beat Progression</span>
+                    {beats.length === 0 ? (
+                      <p className="text-[11px] text-slate-600 italic font-mono py-4 text-center">Generate with Gemini AI.</p>
+                    ) : (
+                      beats.map((beat, bi) => {
+                        const isActive = activeBeatIdx === bi;
+                        const shotId   = activeSeq
+                          ? makeShotId(activeSeq.sequence_id, activeSeq.globalIdx, activeScene!.scene_number, beat.beat_number)
+                          : `B${beat.beat_number}`;
+                        return (
+                          <button
+                            key={beat.beat_number}
+                            onClick={() => setActiveBeatIdx(bi)}
+                            className={`w-full text-left rounded-lg p-3 border transition-all cursor-pointer ${
+                              isActive ? "border-orange-500/50 bg-orange-950/15" : "border-white/8 bg-black/30 hover:bg-white/5"
+                            }`}
+                          >
+                            <div className="flex justify-between items-center mb-1.5">
+                              <span className={`font-mono text-[9px] font-bold ${isActive ? "text-orange-400" : "text-slate-500"}`}>
+                                BEAT {beat.beat_number}
+                              </span>
+                              <span className="font-mono text-[8px] text-slate-600 bg-black/60 border border-white/8 px-1.5 py-0.5 rounded">
+                                {shotId}
+                              </span>
+                            </div>
+                            <p className="text-[11px] font-sans text-slate-200 leading-relaxed mb-1.5">"{beat.text}"</p>
+                            <div className="space-y-0.5 border-t border-white/5 pt-1.5">
+                              <div className="flex items-start gap-1.5 text-[9px] font-mono">
+                                <span className="text-orange-400 shrink-0 font-bold uppercase">{characters[0]?.identity?.name?.split(" ")[0] ?? "C1"}:</span>
+                                <span className="text-slate-400 uppercase tracking-wide leading-tight">{beat.action.split(":")[1]?.trim() || beat.action}</span>
+                              </div>
+                              <div className="flex items-start gap-1.5 text-[9px] font-mono">
+                                <span className="text-emerald-400 shrink-0 font-bold uppercase">{characters[1]?.identity?.name?.split(" ")[0] ?? "C2"}:</span>
+                                <span className="text-slate-400 uppercase tracking-wide leading-tight">{beat.reaction.split(":")[1]?.trim() || beat.reaction}</span>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
                     )}
                   </div>
-                </div>
 
-                {/* VOCAL TELEMETRY */}
-                <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <Music className="w-3 h-3 text-amber-400" />
-                    <span className="font-mono text-[9px] text-slate-300 uppercase font-bold">Vocal Telemetry</span>
-                    <span className={`ml-auto font-mono text-[8px] px-1.5 py-0.5 rounded border ${
-                      stressPercentage > 70 ? "text-red-400 bg-red-950/30 border-red-900/50" :
-                      stressPercentage > 40 ? "text-amber-400 bg-amber-950/30 border-amber-900/50" :
-                      "text-emerald-400 bg-emerald-950/30 border-emerald-900/50"
-                    }`}>
-                      {stressPercentage > 70 ? "PANIC" : stressPercentage > 40 ? "TENSION" : "NEUTRAL"}
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {[
-                      { label: "Stability", value: activeVocalTelemetry?.stability ?? 75, color: "bg-emerald-500" },
-                      { label: "Style", value: activeVocalTelemetry?.style_exaggeration ?? 15, color: "bg-amber-500" },
-                    ].map(s => (
-                      <div key={s.label}>
-                        <div className="flex justify-between text-[9px] font-mono text-slate-500 mb-1">
-                          <span>{s.label}</span>
-                          <span className="text-slate-300">{s.value}%</span>
-                        </div>
-                        <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
-                          <div className={`${s.color} h-full rounded-full transition-all duration-500`} style={{ width: `${s.value}%` }} />
-                        </div>
+                  {/* Payload — right column */}
+                  <div className="space-y-3">
+                    {/* Shot ID badge */}
+                    {currentBeat && (
+                      <div className="flex items-center justify-between bg-black/50 border border-white/10 rounded-lg px-3 py-2">
+                        <span className="font-mono text-[9px] text-slate-500">Active Shot</span>
+                        <span className="font-mono text-[10px] font-bold text-orange-400">{currentShotId}</span>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Audio */}
+                    <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Volume2 className="w-3 h-3 text-emerald-400" />
+                        <span className="font-mono text-[9px] text-slate-300 uppercase font-bold">Audio Payload</span>
+                        <span className="ml-auto font-mono text-[8px] text-slate-600">{currentShotId}_AUDIO</span>
+                      </div>
+                      {vocalProfile ? (
+                        <div className="space-y-1.5 text-[9px] font-mono">
+                          <div className="flex justify-between text-slate-400"><span>Speaker</span><span className="text-slate-200 font-bold">{vocalProfile.name}</span></div>
+                          <div className="flex justify-between text-slate-400">
+                            <span>State</span>
+                            <span className={`font-bold ${vocalProfile.label === "PANIC" ? "text-red-400" : vocalProfile.label === "TENSION" ? "text-amber-400" : "text-emerald-400"}`}>{vocalProfile.label}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-400"><span>Stability</span><span className="text-white">{vocalProfile.stability}%</span></div>
+                          <div className="flex justify-between text-slate-400"><span>Style</span><span className="text-white">{vocalProfile.style}%</span></div>
+                          <p className="text-[8px] text-slate-600 italic border-t border-white/5 pt-1.5 leading-relaxed">{vocalProfile.stress_cues}</p>
+                        </div>
+                      ) : <p className="text-[9px] text-slate-600 italic">No vocal profile.</p>}
+                    </div>
+
+                    {/* Video */}
+                    <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Film className="w-3 h-3 text-blue-400" />
+                        <span className="font-mono text-[9px] text-slate-300 uppercase font-bold">Video Prompt</span>
+                        <span className="ml-auto font-mono text-[8px] text-slate-600">{currentShotId}_VIDEO</span>
+                      </div>
+                      <div className="space-y-1.5 text-[9px] font-mono">
+                        <div className="flex justify-between text-slate-400"><span>Framing</span><span className="text-slate-200 text-right max-w-[120px] leading-tight">{vocalProfile?.framing || "Macro Close-Up"}</span></div>
+                        <div className="flex justify-between text-slate-400">
+                          <span>Motion</span>
+                          <span className="text-slate-200">{currentBeat && currentBeat.beat_number <= 2 ? "190ms delay" : currentBeat && currentBeat.beat_number <= 4 ? "120ms delay" : "60ms rapid cut"}</span>
+                        </div>
+                        {currentBeat && <p className="text-[8px] text-slate-600 italic border-t border-white/5 pt-1.5 leading-relaxed">{currentBeat.visual_flora}</p>}
+                      </div>
+                    </div>
+
+                    {/* Style + Greenhouse */}
+                    <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Palette className="w-3 h-3 text-purple-400" />
+                        <span className="font-mono text-[9px] text-slate-300 uppercase font-bold">Styles Palette</span>
+                        <span className="ml-auto font-mono text-[8px] text-slate-600">{currentShotId}_STYLE</span>
+                      </div>
+                      <div className="space-y-1.5 text-[9px] font-mono">
+                        <div className="flex justify-between text-slate-400">
+                          <span>Environment</span>
+                          <span className="text-slate-200">{stress > 70 ? "Defensive Crimson" : stress > 40 ? "Amber Warning" : "Ambient Teal"}</span>
+                        </div>
+                        {vocalProfile?.palette && (
+                          <div className="flex gap-1.5 pt-1">
+                            {vocalProfile.palette.map((hex, i) => (
+                              <div key={i} className="flex items-center gap-1">
+                                <div className="w-3.5 h-3.5 rounded border border-white/10" style={{ backgroundColor: hex }} />
+                                <span className="text-[8px] text-slate-600">{hex}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Vocal Telemetry */}
+                    <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Music className="w-3 h-3 text-amber-400" />
+                        <span className="font-mono text-[9px] text-slate-300 uppercase font-bold">Vocal Telemetry</span>
+                        <span className={`ml-auto font-mono text-[8px] px-1.5 py-0.5 rounded border ${
+                          stress > 70 ? "text-red-400 bg-red-950/30 border-red-900/50"
+                          : stress > 40 ? "text-amber-400 bg-amber-950/30 border-amber-900/50"
+                          : "text-emerald-400 bg-emerald-950/30 border-emerald-900/50"
+                        }`}>{stress > 70 ? "PANIC" : stress > 40 ? "TENSION" : "NEUTRAL"}</span>
+                      </div>
+                      {[
+                        { label: "Stability", value: vocalProfile?.stability ?? 75, color: "bg-emerald-500" },
+                        { label: "Style",     value: vocalProfile?.style ?? 15,     color: "bg-amber-500" },
+                      ].map(s => (
+                        <div key={s.label}>
+                          <div className="flex justify-between text-[9px] font-mono text-slate-500 mb-1">
+                            <span>{s.label}</span><span className="text-slate-300">{s.value}%</span>
+                          </div>
+                          <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                            <div className={`${s.color} h-full rounded-full transition-all duration-500`} style={{ width: `${s.value}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Greenhouse */}
+                    <GreenhouseVisualizer
+                      stressLevel={stress}
+                      activeFlora={currentBeat?.visual_flora || "Luminescent orchids in stasis."}
+                      activeStatus={currentBeat?.status || "Stable."}
+                    />
                   </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-slate-600 font-mono text-xs italic text-center">Select a beat<br/>to load payload.</p>
-              </div>
-            )}
-          </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          {/* CTA pinned to bottom */}
-          <div className="shrink-0 p-3 border-t border-white/8">
-            <button
-              onClick={() => onSelectBlueprint(blueprint)}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-bold transition-all cursor-pointer"
-            >
-              Assemble Screenplay
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-      </div>
+          </div>{/* end right panel */}
+        </div>{/* end two-col grid */}
+      </div>{/* end card */}
     </div>
   );
 }
