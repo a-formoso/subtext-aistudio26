@@ -295,9 +295,10 @@ interface Phase3ScriptProps {
   blueprint?: Blueprint;
   selectedScriptText?: string;
   onUpdateScriptText: (text: string) => void;
+  onProceedToVisuals?: () => void;
 }
 
-export function Phase3Script({ blueprint, selectedScriptText, onUpdateScriptText }: Phase3ScriptProps) {
+export function Phase3Script({ blueprint, selectedScriptText, onUpdateScriptText, onProceedToVisuals }: Phase3ScriptProps) {
   const [scriptText, setScriptText] = useState(selectedScriptText || PRESEEDED_SCRIPT);
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -443,17 +444,26 @@ Objective: Translate the complete, locked JSON blueprint into a professional, pr
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-slate-300 font-mono transition-all cursor-pointer"
           >
             <FileText className="w-4 h-4 text-orange-500" />
-            {activeTab === "screenplay" ? "View Prompt Guide" : "View Screenplay Draft"}
+            {activeTab === "screenplay" ? "Prompt Guide" : "Screenplay Draft"}
           </button>
-          
+
           <button
             onClick={handleGenerateScript}
             disabled={isLoading}
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-xs text-white font-mono font-bold transition-all shadow-lg shadow-orange-950/30 cursor-pointer"
           >
-            <Sparkles className="w-4 h-4 animate-spin-slow" />
-            {isLoading ? "Assembling Script..." : "Generate Script with Gemini"}
+            <Sparkles className="w-4 h-4" />
+            {isLoading ? "Assembling…" : "Generate Script"}
           </button>
+
+          {onProceedToVisuals && (
+            <button
+              onClick={onProceedToVisuals}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-700 hover:bg-blue-600 text-xs text-white font-mono font-bold transition-all shadow-lg shadow-blue-950/30 cursor-pointer"
+            >
+              Begin Visual Production →
+            </button>
+          )}
         </div>
       </div>
 

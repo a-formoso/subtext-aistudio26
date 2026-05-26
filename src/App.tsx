@@ -1,28 +1,33 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { useState } from "react";
 import { StoryOption, Blueprint } from "./types";
 import { PRESEEDED_OPTIONS, PRESEEDED_BLUEPRINT, PRESEEDED_SCRIPT } from "./preseededData";
 import { Phase1Discovery } from "./components/Phase1Discovery";
 import { Phase2Blueprint } from "./components/Phase2Blueprint";
 import { Phase3Script } from "./components/Phase3Script";
-import { Clapperboard, HelpCircle, FileText, ChevronRight, Activity, Globe } from "lucide-react";
+import { Phase4Visuals } from "./components/Phase4Visuals";
+import { Phase5Shots } from "./components/Phase5Shots";
+import { Phase6Assembly } from "./components/Phase6Assembly";
 import { motion, AnimatePresence } from "motion/react";
+import { PanelRightOpen, PanelRightClose } from "lucide-react";
+
+type Phase = 1 | 2 | 3 | 4 | 5 | 6;
+
+const PHASES = [
+  { id: 1, label: "Discovery",  short: "01", desc: "Idea → Direction" },
+  { id: 2, label: "Blueprint",  short: "02", desc: "Acts & Beats" },
+  { id: 3, label: "Screenplay", short: "03", desc: "Script Output" },
+  { id: 4, label: "Visuals",    short: "04", desc: "Char & Locations" },
+  { id: 5, label: "Shots",      short: "05", desc: "Storyboard" },
+  { id: 6, label: "Assembly",   short: "06", desc: "Export" },
+];
 
 export default function App() {
-  const [activePhase, setActivePhase] = useState<1 | 2 | 3>(1);
+  const [activePhase, setActivePhase] = useState<Phase>(1);
   const [selectedOption, setSelectedOption] = useState<StoryOption>(PRESEEDED_OPTIONS[0]);
   const [lockedOptionId, setLockedOptionId] = useState<number>(PRESEEDED_OPTIONS[0].option_id);
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint>(PRESEEDED_BLUEPRINT);
   const [scriptText, setScriptText] = useState<string>(PRESEEDED_SCRIPT);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const getDisplayCharacters = (option: StoryOption) => {
     if (!option) return [];
@@ -33,17 +38,11 @@ export default function App() {
       }));
     }
     const sheets = option.step_1_and_2_cosmology_and_actors?.character_sheets || [];
-    return sheets.map(s => ({
-      name: s.name || "Character",
-      role: s.role || "Role"
-    }));
+    return sheets.map(s => ({ name: s.name || "Character", role: s.role || "Role" }));
   };
 
-  // When user clicks a selected option in Phase 1, we sync chosen option and proceed
   const handleSelectOption = (option: StoryOption) => {
     setSelectedOption(option);
-    
-    // Normalize fields for BOTH old layout and new Lego Bricks layout
     const charsList = option.characters && Array.isArray(option.characters)
       ? (option.characters as any[]).map(c => ({
           name: c.identity?.name || c.name || "Character",
@@ -54,47 +53,27 @@ export default function App() {
           unconscious_desire: c.motivation?.unconscious_need || c.unconscious_desire || ""
         }))
       : (option.step_1_and_2_cosmology_and_actors?.character_sheets || []).map(c => ({
-          name: c.name || "Character",
-          role: c.role || "Role",
-          characterization: c.characterization || "",
-          true_character: c.true_character || "",
-          conscious_desire: c.conscious_desire || "",
-          unconscious_desire: c.unconscious_desire || ""
+          name: c.name || "Character", role: c.role || "Role",
+          characterization: c.characterization || "", true_character: c.true_character || "",
+          conscious_desire: c.conscious_desire || "", unconscious_desire: c.unconscious_desire || ""
         }));
 
     const locDim = option.setting?.dimensions || option.step_1_and_2_cosmology_and_actors?.dimensions || {
-      period: "Near-future",
-      duration: "15 minutes",
-      location: "Rooftop Bio-Dome Penthouse",
-      conflict_level: "High Conflict"
+      period: "Near-future", duration: "15 minutes", location: "Rooftop Bio-Dome Penthouse", conflict_level: "High Conflict"
     };
-
     const creativeLimitation = option.setting?.creative_limitation || option.step_1_and_2_cosmology_and_actors?.creative_limitation || "Confined inside greenhouse";
-
     const propsList = option.meaning?.props_sheet || option.step_3_and_4_meaning_and_props?.props_sheet || [];
 
-    // Dynamically derive matching seed blueprint to prevent mismatch state
     const matchedBlueprint: Blueprint = { ...PRESEEDED_BLUEPRINT };
     matchedBlueprint.title = option.title;
-    
-    // Ensure both old and new layout elements exist inside matchedBlueprint
-    matchedBlueprint.setting = option.setting || {
-      dimensions: locDim,
-      creative_limitation: creativeLimitation
-    };
+    matchedBlueprint.setting = option.setting || { dimensions: locDim, creative_limitation: creativeLimitation };
     matchedBlueprint.meaning = option.meaning || {
       controlling_idea: option.step_3_and_4_meaning_and_props?.controlling_idea || "",
       dialectical_debate: option.step_3_and_4_meaning_and_props?.dialectical_debate || { positive_idea: "", negative_counter_idea: "" },
       props_sheet: propsList
     };
     matchedBlueprint.characters = option.characters || [];
-
-    // Fill the legacy fields as well to guarantee any downstream components don't log errors
-    matchedBlueprint.step_1_and_2_cosmology_and_actors = {
-      dimensions: locDim,
-      creative_limitation: creativeLimitation,
-      character_sheets: charsList
-    };
+    matchedBlueprint.step_1_and_2_cosmology_and_actors = { dimensions: locDim, creative_limitation: creativeLimitation, character_sheets: charsList };
     matchedBlueprint.step_3_and_4_meaning_and_props = {
       premise: option.meaning?.premise || option.step_3_and_4_meaning_and_props?.premise || "",
       controlling_idea: option.meaning?.controlling_idea || option.step_3_and_4_meaning_and_props?.controlling_idea || "",
@@ -102,151 +81,23 @@ export default function App() {
       props_sheet: propsList
     };
 
-    // Build matching scenes sequence
     if (option.option_id !== 1) {
       const char1 = charsList[0] || { name: "Saboteur", role: "Saboteur" };
       const char2 = charsList[1] || { name: "Target", role: "Target" };
       const prop1 = propsList?.[0] || { name: "Device", description: "device" };
       const prop2 = propsList?.[1] || { name: "Interface", description: "interface" };
-
       matchedBlueprint.step_5a_sequence_map = {
-        act_one_sequences: [
-          {
-            sequence_id: "A1_S1",
-            act: "ACT ONE",
-            actLabel: "Set-Up",
-            title: "Establishing the Trap",
-            setting_macro: `${locDim.location || "Preserved Sanctuary"} - Night`,
-            themeFocus: "Control - Isolation",
-            dramatic_arc: "Establishing superficial harmony shifting to acute tension.",
-            scenes: [
-              {
-                scene_number: 1,
-                setting_micro: `Near the ${prop1.name}`,
-                scene_objective: `Establish a false sense of comfort and introduce the ${prop1.name}.`,
-                opening_value: "Polite Concord",
-                closing_value: "Subtle Apprehension",
-                narrative_action: `The characters spar verbally as ${char1.name} prepares the ${prop1.name}.`,
-                visualDesc: `A highly responsive environment: ${creativeLimitation}`
-              }
-            ]
-          }
-        ],
-        act_two_sequences: [
-          {
-            sequence_id: "A2_S1",
-            act: "ACT TWO",
-            actLabel: "Confrontation",
-            title: "The Climactic Test",
-            setting_macro: locDim.location || "Sanctuary",
-            themeFocus: "Tension - Micro-Sovereignty",
-            dramatic_arc: "The environment exposes the internal physiological lie.",
-            scenes: [
-              {
-                scene_number: 2,
-                setting_micro: `Sensing biometrics via ${prop2.name}`,
-                scene_objective: `${char1.name} executes the strategic move with ${prop1.name} while ${char2.name} probes their mask.`,
-                opening_value: "Protected Mask",
-                closing_value: "Severe Exposure",
-                narrative_action: `Sensing elevated respiration of ${char1.name}, the automated scanner flares with color shifts.`,
-                visualDesc: `Bioluminescence reactive to ${char1.name}'s heart rate indicator.`
-              }
-            ]
-          }
-        ],
-        act_three_sequences: [
-          {
-            sequence_id: "A3_S1",
-            act: "ACT THREE",
-            actLabel: "Resolution",
-            title: "The Swapped Toast",
-            setting_macro: locDim.location || "Sanctuary",
-            themeFocus: "Sovereignty Reclaimed",
-            dramatic_arc: "Sovereignty reclaimed through fatal choice.",
-            scenes: [
-              {
-                scene_number: 3,
-                setting_micro: "The final direct standoff",
-                scene_objective: "The clinical standoff resolved through tragic exchange.",
-                opening_value: "Controlled Lock",
-                closing_value: "Sovereign Expiation",
-                narrative_action: `Swapping items, ${char1.name} and ${char2.name} decide their fates together. The smart systems flare in warning.`,
-                visualDesc: `Bioluminescent feedback reflecting the heavy consequences.`
-              }
-            ]
-          }
-        ]
+        act_one_sequences: [{ sequence_id: "A1_S1", act: "ACT ONE", actLabel: "Set-Up", title: "Establishing the Trap", setting_macro: `${locDim.location || "Sanctuary"} - Night`, themeFocus: "Control - Isolation", dramatic_arc: "Establishing harmony shifting to tension.", scenes: [{ scene_number: 1, setting_micro: `Near the ${prop1.name}`, scene_objective: `Establish comfort and introduce ${prop1.name}.`, opening_value: "Polite Concord", closing_value: "Subtle Apprehension", narrative_action: `${char1.name} prepares the ${prop1.name}.`, visualDesc: creativeLimitation }] }],
+        act_two_sequences: [{ sequence_id: "A2_S1", act: "ACT TWO", actLabel: "Confrontation", title: "The Climactic Test", setting_macro: locDim.location || "Sanctuary", themeFocus: "Tension - Exposure", dramatic_arc: "Environment exposes the internal physiological lie.", scenes: [{ scene_number: 2, setting_micro: `Sensing biometrics via ${prop2.name}`, scene_objective: `${char1.name} executes the move while ${char2.name} probes.`, opening_value: "Protected Mask", closing_value: "Severe Exposure", narrative_action: `Automated scanner flares with color shifts.`, visualDesc: `Bioluminescence reactive to heart rate.` }] }],
+        act_three_sequences: [{ sequence_id: "A3_S1", act: "ACT THREE", actLabel: "Resolution", title: "The Swapped Toast", setting_macro: locDim.location || "Sanctuary", themeFocus: "Sovereignty Reclaimed", dramatic_arc: "Sovereignty reclaimed through fatal choice.", scenes: [{ scene_number: 3, setting_micro: "Final standoff", scene_objective: "Clinical standoff resolved through tragic exchange.", opening_value: "Controlled Lock", closing_value: "Sovereign Expiation", narrative_action: `${char1.name} and ${char2.name} decide their fates.`, visualDesc: `Bioluminescent feedback reflecting consequences.` }] }]
       };
       matchedBlueprint.step_5b_subtextual_beat_sheets = [
-        {
-          target_sequence_id: "A1_S1",
-          scene_number: 1,
-          micro_blueprint: {
-            scene_objective: `Settle into role while dealing with ${prop1.name}`,
-            opening_value: "Stable",
-            closing_value: "Tension",
-            subtextual_beat_progression: [
-              {
-                beat_number: 1,
-                action: `${char1.name}: Concealing tremors while looking at ${prop1.name}.`,
-                reaction: `${char2.name}: Rotating biometric accessories, testing boundaries.`,
-                text: `This environment represents our future. We must trust what is automated.`,
-                status: "Superficial harmony. Heartrate 74bpm.",
-                visual_flora: "Flora remains steady pale lavender, reflecting cool quietness."
-              },
-              {
-                beat_number: 2,
-                action: `${char1.name}: Quietly shifting the position of ${prop1.name}.`,
-                reaction: `${char2.name}: Adjusting focus directly, locking eyes.`,
-                text: `Automated designs have zero sense of guilt. Human intentions are far more fragile.`,
-                status: "Tension creeps. Heartrate 94bpm.",
-                visual_flora: "Canopy orchids turn deep violet, reacting to humidity shifts."
-              }
-            ]
-          }
-        },
-        {
-          target_sequence_id: "A2_S1",
-          scene_number: 2,
-          micro_blueprint: {
-            scene_objective: "Force the chemical exchange of elements.",
-            opening_value: "Standoff",
-            closing_value: "Collapse",
-            subtextual_beat_progression: [
-              {
-                beat_number: 3,
-                action: `${char1.name}: Manipulating the vents near ${prop2.name}.`,
-                reaction: `${char2.name}: Accessing bio-filters, challenging loyalty.`,
-                text: "Let us drink from the same source. Tell me: where does your true loyalty reside?",
-                status: "Panic registered. Heartrate 114bpm.",
-                visual_flora: "Environmental systems erupt in blazing orange mist."
-              }
-            ]
-          }
-        },
-        {
-          target_sequence_id: "A3_S1",
-          scene_number: 3,
-          micro_blueprint: {
-            scene_objective: "Complete the exchange of elements.",
-            opening_value: "Tragedy",
-            closing_value: "Sovereignty",
-            subtextual_beat_progression: [
-              {
-                beat_number: 4,
-                action: `${char1.name}: Exhaling completely, choosing the path of self-sacrifice.`,
-                reaction: `${char2.name}: Accepting the swapped vessels with a steady gaze.`,
-                text: "To clear coordinates, free from corporate filters. We go together.",
-                status: "Final resolution. Heartrate 132bpm.",
-                visual_flora: "The bulkhead sensors explode in wild, spectacular defensive crimson petals!"
-              }
-            ]
-          }
-        }
+        { target_sequence_id: "A1_S1", scene_number: 1, micro_blueprint: { scene_objective: `Settle into role with ${prop1.name}`, opening_value: "Stable", closing_value: "Tension", subtextual_beat_progression: [{ beat_number: 1, action: `${char1.name}: Concealing tremors near ${prop1.name}.`, reaction: `${char2.name}: Rotating accessories, testing boundaries.`, text: `This environment represents our future. Trust what is automated.`, status: "Superficial harmony. Heartrate 74bpm.", visual_flora: "Flora steady pale lavender." }, { beat_number: 2, action: `${char1.name}: Quietly shifting ${prop1.name}.`, reaction: `${char2.name}: Locking eyes directly.`, text: `Automated designs have zero sense of guilt. Human intentions are far more fragile.`, status: "Tension creeps. Heartrate 94bpm.", visual_flora: "Canopy orchids turn deep violet." }] } },
+        { target_sequence_id: "A2_S1", scene_number: 2, micro_blueprint: { scene_objective: "Force the chemical exchange.", opening_value: "Standoff", closing_value: "Collapse", subtextual_beat_progression: [{ beat_number: 3, action: `${char1.name}: Manipulating vents near ${prop2.name}.`, reaction: `${char2.name}: Accessing bio-filters.`, text: "Let us drink from the same source. Where does your loyalty reside?", status: "Panic registered. Heartrate 114bpm.", visual_flora: "Environmental systems erupt in blazing orange mist." }] } },
+        { target_sequence_id: "A3_S1", scene_number: 3, micro_blueprint: { scene_objective: "Complete the exchange.", opening_value: "Tragedy", closing_value: "Sovereignty", subtextual_beat_progression: [{ beat_number: 4, action: `${char1.name}: Exhaling, choosing self-sacrifice.`, reaction: `${char2.name}: Accepting swapped vessels.`, text: "To clear coordinates, free from corporate filters. We go together.", status: "Final resolution. Heartrate 132bpm.", visual_flora: "Bulkhead sensors explode in defensive crimson petals!" }] } }
       ];
-      matchedBlueprint.step_6_master_logline = `Sealed inside the ${locDim.location}, ${char1.role} ${char1.name} must use the ${prop1.name} against ${char2.name}, triggering biometric sensors that write their secrets in the environment above.`;
+      matchedBlueprint.step_6_master_logline = `Sealed inside the ${locDim.location}, ${char1.role} ${char1.name} uses the ${prop1.name} against ${char2.name}, triggering biometric sensors that write secrets in the environment above.`;
     }
-
     setSelectedBlueprint(matchedBlueprint);
   };
 
@@ -261,132 +112,133 @@ export default function App() {
     setActivePhase(3);
   };
 
-  const handleUpdateScriptText = (text: string) => {
-    setScriptText(text);
-  };
+  const stressLevel = selectedOption?.option_id === 3 ? 88 : selectedOption?.option_id === 2 ? 58 : 32;
+  const stressColor = stressLevel >= 80 ? "bg-red-500" : stressLevel >= 50 ? "bg-amber-500" : "bg-emerald-500";
 
   return (
     <div className="h-screen overflow-hidden bg-[#08080a] text-gray-200 flex flex-col font-sans select-text">
-      {/* Decorative clean background mesh inside workspace */}
-      <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-orange-950/5 to-transparent pointer-events-none z-0" />
+      <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-orange-950/5 to-transparent pointer-events-none z-0" />
 
-      {/* Main Container Frame - Immersive layout with precise border styling */}
       <div className="w-full max-w-7xl mx-auto my-3 bg-[#08080a] border border-white/10 rounded-2xl flex flex-col shadow-[0_24px_64px_-12px_rgba(0,0,0,0.8)] z-10 relative overflow-hidden" style={{ height: "calc(100vh - 24px)" }}>
-        
-        {/* Top Navigation Header */}
-        <nav className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-black/40 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-orange-600 rounded-sm flex items-center justify-center font-bold text-white tracking-tighter">IS</div>
-            <div>
-              <h1 className="text-sm font-bold tracking-widest uppercase text-white">Infinite Studio</h1>
-              <p className="text-[10px] text-orange-500 uppercase tracking-widest leading-none">Screenwriting Playbook v4.1</p>
+
+        {/* ── Nav Header ── */}
+        <nav className="h-14 border-b border-white/10 flex items-center justify-between px-5 bg-black/40 backdrop-blur-md shrink-0 gap-4">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-7 h-7 bg-orange-600 rounded-sm flex items-center justify-center font-bold text-white text-xs tracking-tighter">IS</div>
+            <div className="hidden sm:block">
+              <h1 className="text-xs font-bold tracking-widest uppercase text-white leading-none">Infinite Studio</h1>
+              <p className="text-[9px] text-orange-500 uppercase tracking-widest leading-none mt-0.5">Screenwriting Playbook v4.1</p>
             </div>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex gap-2">
-              <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-mono text-gray-400 uppercase tracking-tighter">
-                ID: SBR-992
-              </div>
-              <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-mono text-emerald-500 uppercase tracking-tighter">
-                Status: {activePhase === 1 ? "Discovery Phase" : activePhase === 2 ? "Blueprint Assembled" : "Script Compiled"}
-              </div>
+
+          {/* Phase progress bar */}
+          <div className="flex-1 flex items-center justify-center gap-1 min-w-0 overflow-x-auto">
+            {PHASES.map((p, i) => {
+              const isDone = (activePhase as number) > p.id;
+              const isActive = activePhase === p.id;
+              return (
+                <div key={p.id} className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => setActivePhase(p.id as Phase)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                      isActive ? "bg-orange-600 text-white" :
+                      isDone ? "bg-white/10 text-emerald-400 hover:bg-white/15" :
+                      "bg-white/3 text-slate-600 hover:bg-white/8 hover:text-slate-400"
+                    }`}
+                  >
+                    <span>{p.short}</span>
+                    <span className="hidden md:inline">{p.label}</span>
+                  </button>
+                  {i < PHASES.length - 1 && (
+                    <div className={`w-4 h-px ${isDone ? "bg-emerald-500/40" : "bg-white/8"}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Ambient greenhouse dot */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/8 bg-white/3">
+              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${stressColor}`} />
+              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{stressLevel}%</span>
             </div>
-            
-            {/* Top Shortcut actions */}
-            <button 
-              onClick={() => setActivePhase(3)}
-              className="px-4 py-1.5 bg-orange-600 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-orange-500 transition-colors cursor-pointer"
+            {/* Sidebar toggle */}
+            <button
+              onClick={() => setSidebarOpen(o => !o)}
+              className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+              title={sidebarOpen ? "Collapse sidebar" : "Expand data sidebar"}
             >
-              Generate Script
+              {sidebarOpen
+                ? <PanelRightClose className="w-3.5 h-3.5 text-slate-400" />
+                : <PanelRightOpen className="w-3.5 h-3.5 text-slate-400" />
+              }
             </button>
           </div>
         </nav>
 
-        {/* Outer Split Layout */}
+        {/* ── Body ── */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* Sidebar: Phase Navigation */}
-          <aside className="w-full md:w-16 border-b md:border-b-0 md:border-r border-white/10 flex md:flex-col items-center py-4 md:py-8 justify-around md:justify-start gap-4 md:gap-10 shrink-0 bg-[#0a0a0d]">
-            <div onClick={() => setActivePhase(1)} className="group cursor-pointer relative">
-              <div className={`w-10 h-10 rounded-lg border transition-all flex items-center justify-center ${
-                activePhase === 1
-                  ? "border-orange-500/50 bg-orange-500/10 text-orange-500"
-                  : "border-white/10 bg-white/5 text-gray-500 hover:border-white/20"
-              }`}>
-                <span className="text-xs font-bold">01</span>
-              </div>
-              <div className="absolute left-1/2 md:left-14 top-12 md:top-2 -translate-x-1/2 md:translate-x-0 px-2 py-1 bg-black border border-white/10 text-[9px] uppercase whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all z-50 rounded shadow-md pointer-events-none">
-                Discovery
-              </div>
-            </div>
 
-            <div onClick={() => setActivePhase(2)} className="group cursor-pointer relative">
-              <div className={`w-10 h-10 rounded-lg border transition-all flex items-center justify-center ${
-                activePhase === 2
-                  ? "border-orange-500/50 bg-orange-500/10 text-orange-500"
-                  : "border-white/10 bg-white/5 text-gray-500 hover:border-white/20"
-              }`}>
-                <span className="text-xs font-bold">02</span>
-              </div>
-              <div className="absolute left-1/2 md:left-14 top-12 md:top-2 -translate-x-1/2 md:translate-x-0 px-2 py-1 bg-black border border-white/10 text-[9px] uppercase whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all z-50 rounded shadow-md pointer-events-none">
-                Pre-Prod Blueprint
-              </div>
-            </div>
+          {/* Sidebar: Phase number nav */}
+          <aside className="w-full md:w-14 border-b md:border-b-0 md:border-r border-white/10 flex md:flex-col items-center py-3 md:py-6 justify-around md:justify-start gap-3 md:gap-8 shrink-0 bg-[#0a0a0d]">
+            {PHASES.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setActivePhase(p.id as Phase)}
+                className={`group relative w-9 h-9 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
+                  activePhase === p.id
+                    ? "border-orange-500/50 bg-orange-500/10 text-orange-500"
+                    : (activePhase as number) > p.id
+                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600"
+                    : "border-white/10 bg-white/5 text-slate-600 hover:border-white/20 hover:text-slate-400"
+                }`}
+              >
+                <span className="text-[10px] font-bold">{p.short}</span>
+                <div className="absolute left-11 top-1/2 -translate-y-1/2 px-2 py-1 bg-black border border-white/10 text-[9px] uppercase whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all z-50 rounded shadow-md pointer-events-none">
+                  {p.label}
+                </div>
+              </button>
+            ))}
 
-            <div onClick={() => setActivePhase(3)} className="group cursor-pointer relative">
-              <div className={`w-10 h-10 rounded-lg border transition-all flex items-center justify-center ${
-                activePhase === 3
-                  ? "border-orange-500/50 bg-orange-500/10 text-orange-500"
-                  : "border-white/10 bg-white/5 text-gray-500 hover:border-white/20"
-              }`}>
-                <span className="text-xs font-bold">03</span>
-              </div>
-              <div className="absolute left-1/2 md:left-14 top-12 md:top-2 -translate-x-1/2 md:translate-x-0 px-2 py-1 bg-black border border-white/10 text-[9px] uppercase whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all z-50 rounded shadow-md pointer-events-none">
-                Screenplay Draft
-              </div>
-            </div>
-
-            {/* Glowing Progress indicator slider (Desktop only) */}
-            <div className="hidden md:block mt-auto mb-4">
-              <div className="w-1 h-32 bg-white/5 rounded-full relative overflow-hidden">
-                <div 
-                  className="absolute top-0 w-full bg-slate-500 transition-all duration-350"
-                  style={{
-                    height: activePhase === 1 ? "33%" : activePhase === 2 ? "66%" : "100%"
-                  }}
+            <div className="hidden md:block mt-auto mb-3">
+              <div className="w-0.5 h-24 bg-white/5 rounded-full relative overflow-hidden">
+                <div
+                  className="absolute top-0 w-full bg-orange-600/60 transition-all duration-500"
+                  style={{ height: `${((activePhase - 1) / 5) * 100}%` }}
                 />
               </div>
             </div>
           </aside>
 
-          {/* Main Integrated Workspace Structure */}
-          <main className="flex-1 grid grid-cols-12 overflow-hidden">
-            {/* Phase Blueprint Data / Interactive Main Center */}
-            <section className="col-span-12 lg:col-span-8 p-6 flex flex-col gap-6 overflow-y-auto border-b lg:border-b-0 lg:border-r border-white/10 bg-gradient-to-br from-[#0e0e12] to-[#08080a] min-h-[500px]">
-              
-              <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-2">
+          {/* Main workspace */}
+          <main className={`flex-1 overflow-hidden flex ${sidebarOpen ? "flex-col lg:flex-row" : ""}`}>
+            {/* Primary content */}
+            <section className={`flex-1 p-5 flex flex-col gap-5 overflow-y-auto bg-gradient-to-br from-[#0e0e12] to-[#08080a] min-h-[400px] ${sidebarOpen ? "lg:border-r border-white/10" : ""}`}>
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <div>
-                  <span className="text-[10px] uppercase tracking-[0.25em] text-slate-400 font-bold mb-1 block">
-                    {activePhase === 1 ? "Phase 1: Cosmology Discovery" : activePhase === 2 ? "Phase 2: Pre-Production Design" : "Phase 3: Screenplay Execution"}
+                  <span className="text-[9px] uppercase tracking-[0.25em] text-slate-500 font-mono font-bold mb-0.5 block">
+                    {PHASES.find(p => p.id === activePhase)?.label}
                   </span>
-                  <h2 className="text-2xl font-light text-white tracking-tight">
-                    {selectedOption?.title || "Story Blueprint Engine"}
+                  <h2 className="text-xl font-light text-white tracking-tight">
+                    {(activePhase <= 3) ? (selectedOption?.title || "Story Blueprint Engine") : PHASES.find(p => p.id === activePhase)?.desc}
                   </h2>
                 </div>
-                <div className="text-right hidden sm:block">
-                  <span className="text-[10px] text-gray-500 font-mono tracking-tighter uppercase block">Active Target ID</span>
-                  <span className="text-xs font-mono text-gray-400 font-semibold uppercase">OPTION-0{selectedOption?.option_id || 1}</span>
-                </div>
+                {activePhase <= 3 && (
+                  <div className="text-right hidden sm:block">
+                    <span className="text-[9px] text-gray-500 font-mono tracking-tighter uppercase block">Active Target</span>
+                    <span className="text-[10px] font-mono text-gray-400 font-semibold uppercase">OPTION-0{selectedOption?.option_id || 1}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Viewport for Interactive Phases */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activePhase}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="outline-none"
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
                 >
                   {activePhase === 1 && (
                     <Phase1Discovery
@@ -396,7 +248,6 @@ export default function App() {
                       lockedOptionId={lockedOptionId}
                     />
                   )}
-
                   {activePhase === 2 && (
                     <Phase2Blueprint
                       chosenOption={selectedOption}
@@ -404,136 +255,125 @@ export default function App() {
                       selectedBlueprint={selectedBlueprint}
                     />
                   )}
-
                   {activePhase === 3 && (
                     <Phase3Script
                       blueprint={selectedBlueprint}
                       selectedScriptText={scriptText}
-                      onUpdateScriptText={handleUpdateScriptText}
+                      onUpdateScriptText={setScriptText}
+                      onProceedToVisuals={() => setActivePhase(4)}
+                    />
+                  )}
+                  {activePhase === 4 && (
+                    <Phase4Visuals
+                      selectedOption={selectedOption}
+                      onProceed={() => setActivePhase(5)}
+                    />
+                  )}
+                  {activePhase === 5 && (
+                    <Phase5Shots
+                      blueprint={selectedBlueprint}
+                      onProceed={() => setActivePhase(6)}
+                    />
+                  )}
+                  {activePhase === 6 && (
+                    <Phase6Assembly
+                      blueprint={selectedBlueprint}
+                      onBack={() => setActivePhase(5)}
                     />
                   )}
                 </motion.div>
               </AnimatePresence>
             </section>
 
-            {/* Immersive Sidebar: Diagnostics, Biological Output & Live JSON database sync */}
-            <aside className="col-span-12 lg:col-span-4 bg-[#0a0a0e] p-6 flex flex-col gap-6 overflow-y-auto border-t lg:border-t-0 border-white/10">
-              
-              {/* Telemetry Indicator Widget */}
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
-                <div className="flex justify-between items-center">
-                  <h5 className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">
-                    Greenhouse Stress Monitor
-                  </h5>
-                  <div className={`w-2 h-2 rounded-full animate-pulse ${selectedOption?.option_id === 3 ? "bg-red-500" : selectedOption?.option_id === 2 ? "bg-amber-500" : "bg-emerald-500"}`} />
-                </div>
+            {/* Collapsible data sidebar */}
+            <AnimatePresence>
+              {sidebarOpen && (
+                <motion.aside
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 280, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="shrink-0 bg-[#0a0a0e] overflow-hidden border-t lg:border-t-0 border-white/10"
+                >
+                  <div className="w-[280px] p-4 flex flex-col gap-4 h-full overflow-y-auto">
+                    <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest font-bold">Dev / Data Panel</span>
 
-                {/* Elegant dynamic vertical bars */}
-                <div className="flex items-end justify-between gap-1 h-28 px-2 border-b border-white/5 pb-2">
-                  <div 
-                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700"
-                    style={{ height: selectedOption?.option_id === 3 ? "55%" : selectedOption?.option_id === 2 ? "40%" : "20%" }}
-                  />
-                  <div 
-                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700" 
-                    style={{ height: selectedOption?.option_id === 3 ? "75%" : selectedOption?.option_id === 2 ? "60%" : "35%" }}
-                  />
-                  <div 
-                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700" 
-                    style={{ height: selectedOption?.option_id === 3 ? "45%" : selectedOption?.option_id === 2 ? "55%" : "30%" }}
-                  />
-                  <div 
-                    className={`w-full rounded-t-sm border-t transition-all duration-700 ${
-                      selectedOption?.option_id === 3 
-                        ? "bg-red-600/40 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)] h-[85%]" 
-                        : selectedOption?.option_id === 2
-                        ? "bg-orange-600/40 border-orange-500 h-[65%]"
-                        : "bg-emerald-600/30 border-emerald-500 h-[45%]"
-                    }`}
-                  />
-                  <div 
-                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700" 
-                    style={{ height: selectedOption?.option_id === 3 ? "80%" : selectedOption?.option_id === 2 ? "70%" : "60%" }}
-                  />
-                  <div 
-                    className="w-full bg-slate-600/50 rounded-t-sm border-t border-slate-500/50 transition-all duration-700" 
-                    style={{ height: selectedOption?.option_id === 3 ? "70%" : selectedOption?.option_id === 2 ? "80%" : "45%" }}
-                  />
-                </div>
-
-                <div className="flex justify-between text-[10px] font-mono text-gray-500">
-                  <span>TENSION LEVEL: {selectedOption?.option_id === 3 ? "88.4%" : selectedOption?.option_id === 2 ? "58.1%" : "32.0%"}</span>
-                  <span className={selectedOption?.option_id === 3 ? "text-red-500" : selectedOption?.option_id === 2 ? "text-amber-500" : "text-emerald-500"}>
-                    {selectedOption?.option_id === 3 ? "CRITICAL" : selectedOption?.option_id === 2 ? "RISING" : "STABLE"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dynamic JSON Live Stream panel */}
-              <div className="flex-1 flex flex-col bg-black/60 rounded-xl border border-white/10 overflow-hidden min-h-[300px]">
-                <div className="bg-white/5 px-4 py-2 flex justify-between border-b border-white/10 items-center">
-                  <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">Story Data Snapshot</span>
-                  <span className="text-[9px] font-mono text-emerald-500 uppercase flex items-center gap-1">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Up to Date
-                  </span>
-                </div>
-                
-                <div className="p-4 overflow-auto font-mono text-[10px] text-emerald-500/80 leading-snug">
-                  <pre className="whitespace-pre-wrap select-text selection:bg-emerald-950">
-                    {JSON.stringify({
-                      option_id: selectedOption?.option_id || 1,
-                      title: selectedOption?.title || "",
-                      step_3_and_4: {
-                        premise: selectedOption?.meaning?.premise || selectedOption?.step_3_and_4_meaning_and_props?.premise || "",
-                        controlling_idea: selectedOption?.meaning?.controlling_idea || selectedOption?.step_3_and_4_meaning_and_props?.controlling_idea || "",
-                        dialectical_debate: {
-                          positive: selectedOption?.meaning?.dialectical_debate?.positive_idea || selectedOption?.step_3_and_4_meaning_and_props?.dialectical_debate?.positive_idea || "",
-                          negative: selectedOption?.meaning?.dialectical_debate?.negative_counter_idea || selectedOption?.step_3_and_4_meaning_and_props?.dialectical_debate?.negative_counter_idea || ""
-                        },
-                        props: (selectedOption?.meaning?.props_sheet || selectedOption?.step_3_and_4_meaning_and_props?.props_sheet || [])?.map(p => ({
-                          name: p.name,
-                          role: p.description
-                        })) || []
-                      }
-                    }, null, 2)}
-                  </pre>
-                </div>
-
-                {/* Subtext awareness indicators as requested from mockup */}
-                <div className="mt-auto p-4 border-t border-white/5 space-y-3.5 bg-black/20">
-                  {getDisplayCharacters(selectedOption).map((char, index) => (
-                    <div key={index}>
-                      <div className="flex justify-between text-[9px] text-gray-500 mb-1 font-mono">
-                        <span>{char.name.toUpperCase()}</span>
-                        <span>INTERNAL PRESSURE: {index === 0 ? "92%" : "27%"}</span>
+                    {/* Greenhouse mini-monitor */}
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Greenhouse Monitor</span>
+                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${stressColor}`} />
                       </div>
-                      <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-emerald-500/50 transition-all duration-1000" 
-                          style={{ width: index === 0 ? "92%" : "27%" }}
-                        />
+                      <div className="flex items-end gap-0.5 h-10">
+                        {[20, 35, 30, stressLevel, 60, 45].map((h, i) => (
+                          <div key={i} className={`flex-1 rounded-t-sm border-t transition-all duration-700 ${
+                            i === 3 && stressLevel >= 80 ? "bg-red-600/40 border-red-500"
+                            : i === 3 && stressLevel >= 50 ? "bg-amber-600/40 border-amber-500"
+                            : "bg-slate-600/50 border-slate-500/50"
+                          }`} style={{ height: `${h}%` }} />
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-[9px] font-mono text-slate-500">
+                        <span>TENSION {stressLevel}%</span>
+                        <span className={stressLevel >= 80 ? "text-red-500" : stressLevel >= 50 ? "text-amber-500" : "text-emerald-500"}>
+                          {stressLevel >= 80 ? "CRITICAL" : stressLevel >= 50 ? "RISING" : "STABLE"}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </aside>
+
+                    {/* Character pressure bars */}
+                    <div className="space-y-2.5">
+                      {getDisplayCharacters(selectedOption).map((char, i) => (
+                        <div key={i}>
+                          <div className="flex justify-between text-[9px] font-mono text-slate-500 mb-1">
+                            <span>{char.name.toUpperCase()}</span>
+                            <span>PRESSURE: {i === 0 ? "92%" : "27%"}</span>
+                          </div>
+                          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500/50 transition-all duration-1000" style={{ width: i === 0 ? "92%" : "27%" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* JSON snapshot */}
+                    <div className="flex-1 bg-black/60 rounded-xl border border-white/10 overflow-hidden flex flex-col min-h-[200px]">
+                      <div className="bg-white/5 px-3 py-2 flex justify-between border-b border-white/10 items-center">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Story Snapshot</span>
+                        <span className="text-[9px] font-mono text-emerald-500 flex items-center gap-1">
+                          <span className="inline-block w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> Live
+                        </span>
+                      </div>
+                      <div className="p-3 overflow-auto font-mono text-[9px] text-emerald-500/70 leading-snug flex-1">
+                        <pre className="whitespace-pre-wrap select-text">
+                          {JSON.stringify({
+                            option_id: selectedOption?.option_id || 1,
+                            title: selectedOption?.title || "",
+                            controlling_idea: selectedOption?.meaning?.controlling_idea || selectedOption?.step_3_and_4_meaning_and_props?.controlling_idea || "",
+                            props: (selectedOption?.meaning?.props_sheet || selectedOption?.step_3_and_4_meaning_and_props?.props_sheet || []).map(p => p.name),
+                          }, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                </motion.aside>
+              )}
+            </AnimatePresence>
           </main>
         </div>
 
-        {/* Footer Status Bar matching layout exactly */}
-        <footer className="h-10 border-t border-white/10 bg-black flex items-center px-6 justify-between text-[9px] font-mono tracking-tighter text-gray-500">
-          <div className="flex gap-6">
+        {/* Footer */}
+        <footer className="h-9 border-t border-white/10 bg-black flex items-center px-5 justify-between text-[9px] font-mono tracking-tighter text-gray-500 shrink-0">
+          <div className="flex gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               ENGINE ONLINE
             </span>
-            <span className="hidden sm:inline">McKee Narrative Architecture Layer: ACTIVE</span>
-            <span className="hidden md:inline">Subtext Injection: CALIBRATED</span>
+            <span className="hidden sm:inline">McKee Architecture: ACTIVE</span>
+            <span className="hidden md:inline">Phases 1–6 Pipeline</span>
           </div>
-          <div className="flex gap-4">
-            <span>UTC 23:14:02</span>
-            <span className="text-white">INFINITE_STUDIO_ALPHA</span>
+          <div className="flex gap-3">
+            <span>INFINITE_STUDIO_ALPHA</span>
           </div>
         </footer>
 
@@ -541,4 +381,3 @@ export default function App() {
     </div>
   );
 }
-

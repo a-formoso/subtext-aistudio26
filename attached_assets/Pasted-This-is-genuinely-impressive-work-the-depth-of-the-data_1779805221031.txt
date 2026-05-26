@@ -1,0 +1,130 @@
+This is genuinely impressive work — the depth of the data model is exceptional. Looking at all 6 screens, the core problem is clear: **the app is thinking out loud**. The JSON sidebar, the telemetry, the beat IDs — all of it is scaffolding that's bleeding into the user-facing experience.
+
+Let me give you a full restructure plan you can hand directly to Replit.
+
+---Now I have a clear picture of your app and the design system. Let me give you a structured plan plus a visual overview you can take straight to Replit.Click any phase box to ask me more about it. Here's the full brief you can paste into Replit:
+
+---
+
+## Replit Brief — Subtext AI Studio Restructure + Phase 4–6
+
+**Context for Replit:** This app is a screenwriting production pipeline that takes a user from story idea → script (Phases 1–3, already built using Gemini AI). We are now extending it with Phases 4–6 powered by the **Higgsfield REST API** for AI image and video generation. The core principle is: keep the Gemini brain, add Higgsfield hands.
+
+---
+
+### The Core UI Problem To Fix First
+
+The current UI has three issues bleeding across all screens:
+
+1. **The JSON sidebar is always visible.** It should be collapsed by default, accessible via a small "Dev / Data" toggle for power users only.
+2. **Too many competing panels.** Greenhouse telemetry, beat IDs, vocal sliders, style palettes — all fighting for attention simultaneously. Each screen should have one primary content area and one action.
+3. **No clear sense of progress.** The phase numbers (01, 02, 03) exist but feel decorative. Users need to feel forward momentum.
+
+**Fix:** Add a persistent top progress bar showing phases 1–6 with the current phase highlighted. Collapse the right sidebar by default. Each screen gets a single primary panel and a single primary CTA button.
+
+---
+
+### Screen-by-Screen Restructure
+
+**Phase 1 — Idea & Direction**
+- Top: premise input (large, full width)
+- Middle: 3–4 story option cards in a horizontal row — title + one-line logline only, no data dumps
+- Bottom: single CTA — "Lock this direction →"
+- Remove: JSON snapshot from main view, move to collapsed sidebar
+
+**Phase 2 — Blueprint & Beats**
+- Left panel: Act I / II / III tabs → sequence list
+- Right panel: selected scene's beat cards — dialogue text + subtext action only
+- Beat IDs (A1_Q1_S1_B1 etc.) move to collapsed sidebar
+- Greenhouse telemetry becomes a small ambient indicator dot (green/amber/red) in the top bar — not a full panel
+- Single CTA: "Assemble screenplay →"
+
+**Phase 3 — Screenplay**
+- Full-width screenplay reader in Courier font
+- Stress state tags shown as subtle inline highlights (toggle on/off with one switch)
+- Right sidebar has the shot manifest and audio telemetry (collapsed by default)
+- Two actions only: "Copy text" and "Begin visual production →"
+
+---
+
+### New Phase 4 — Visual Asset Generation (Higgsfield)
+
+**Purpose:** Generate the visual library before any shots are made — characters, locations, props.
+
+**New backend endpoint needed:** `POST /api/generate-visuals`
+
+This endpoint calls the Higgsfield REST API using `HIGGSFIELD_API_KEY` and `HIGGSFIELD_SECRET` from Replit Secrets. It takes the character/location/prop data already present in the Phase 1 JSON and sends it as image generation prompts. Poll `/api/job-status/:jobId` to check completion.
+
+**Screen layout:**
+- Three tabs: Characters | Locations | Props
+- Characters tab: one sub-tab per cast member → shows a 5×2 grid of generated poses (the `master_grid_prompt` already exists in Phase 1 JSON — use it directly)
+- Character state variants: when a character's arc changes (injury, wardrobe shift) a "Add state variant" button generates a new grid for that character post-event
+- Locations tab: one card per unique `setting_macro` from scene data
+- Props tab: one card per item in `props_sheet`
+- Each asset has a "Regenerate" button
+- Single CTA when all assets are approved: "Proceed to shot generation →"
+
+**Why Higgsfield:** The `master_visual_reference.master_grid_prompt` field in the Phase 1 character schema is already formatted for high-fidelity image generation. Higgsfield's Soul model handles the photorealistic, cinematic render quality this app requires. This stays invisible to users — they just see "Generate character visuals."
+
+---
+
+### New Phase 5 — Shot Generation (Higgsfield Seedance 2.0)
+
+**Purpose:** Turn each scene's shot list into storyboard images, then promote to short video clips.
+
+**New backend endpoint needed:** `POST /api/generate-shot`
+
+Takes a shot's composition data (`framing`, `lens`, `key_light`, `kinetic_token`, `visual_flora`) and formats it into a Seedance 2.0 prompt using this structure:
+```
+[SHOT SETUP] {framing}, {lens}, {key_light}
+[OPENING FRAME] {focal_target description}
+[MOTION] {kinetic_token} — {motion field from beat}
+[CLOSING FRAME] {closing value state description}
+[ATMOSPHERE] {visual_flora color + env_vfx}
+```
+
+**Screen layout:**
+- Left: shot list for current scene (pulled from existing shot manifest in Phase 2/3 data)
+- Right: selected shot panel showing:
+  - Auto-generated Seedance prompt (editable)
+  - "Generate image" button → shows result inline
+  - "Promote to video" button → calls video generation
+  - Character state selector (baseline vs post-arc-change variants from Phase 4)
+- Generation happens per shot, not all at once
+- Single CTA when all shots are approved: "Proceed to assembly →"
+
+**Important:** Generation is per-shot not per-beat. Beats inform the motion description inside a shot prompt, but each video clip corresponds to a camera setup (the `setting_micro` field already defines this).
+
+---
+
+### New Phase 6 — Assembly & Export (Higgsfield Canvas)
+
+**Purpose:** Arrange approved clips into a final cut with audio.
+
+**Screen layout:**
+- Horizontal timeline at the top — all approved clips as draggable thumbnails
+- Below timeline: selected clip detail (character, scene, beat reference)
+- Audio section: ElevenLabs vocal state per character per shot (the `voice_clone_id` and `vocal_state` fields from Phase 1 are already structured for this)
+- Virality predictor widget (Higgsfield MCP `virality_predictor` tool — or REST equivalent) showing engagement score
+- Export button: "Download final cut"
+
+**Why Higgsfield Canvas:** The Canvas feature handles location consistency across shots — ensuring the greenhouse backdrop, lighting rig, and environmental details stay coherent across all clips without re-prompting each time. This is what replaces the old Soul character training workflow.
+
+---
+
+### Environment Variables Needed (Replit Secrets)
+
+```
+GEMINI_API_KEY          ← already exists
+HIGGSFIELD_API_KEY      ← new
+HIGGSFIELD_SECRET       ← new
+ELEVENLABS_API_KEY      ← new (for Phase 6 audio)
+```
+
+---
+
+### What NOT to change
+
+- The three-phase Gemini pipeline (`/api/generate-phase1`, `phase2`, `phase3`) works well — do not touch it
+- The existing JSON schema from Phase 1 is the source of truth for all Phase 4–6 prompts — don't rebuild it, read from it
+- The "Greenhouse Stress Monitor" concept is great — shrink it to an ambient indicator dot in the nav bar, not a full panel

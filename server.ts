@@ -369,6 +369,110 @@ Include the visual_flora color shifts (e.g., violet, pale yellow, mottled, defen
   }
 });
 
+// Phase 4: Generate visual asset via Higgsfield
+app.post("/api/generate-visual", async (req, res) => {
+  const { assetId, prompt } = req.body;
+  const apiKey = process.env.HIGGSFIELD_API_KEY;
+  const secret = process.env.HIGGSFIELD_SECRET;
+
+  if (!apiKey || !secret) {
+    return res.status(200).json({
+      success: false,
+      needsApiKey: true,
+      message: "HIGGSFIELD_API_KEY and HIGGSFIELD_SECRET are required in Replit Secrets."
+    });
+  }
+
+  try {
+    const response = await fetch("https://api.higgsfield.ai/v1/images/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+        "X-Secret": secret,
+      },
+      body: JSON.stringify({ prompt, model: "soul", num_images: 10, aspect_ratio: "16:9" }),
+    });
+    const data = await response.json() as any;
+    if (data.job_id || data.images) {
+      res.json({ success: true, jobId: data.job_id, imageUrl: data.images?.[0]?.url });
+    } else {
+      res.json({ success: false, message: data.error || "Higgsfield returned no data." });
+    }
+  } catch (error: any) {
+    console.error("Higgsfield visual generation failed:", error.message);
+    res.json({ success: false, message: error.message });
+  }
+});
+
+// Phase 5: Generate shot image or video via Higgsfield Seedance 2.0
+app.post("/api/generate-shot", async (req, res) => {
+  const { shotId, prompt, type, imageUrl } = req.body;
+  const apiKey = process.env.HIGGSFIELD_API_KEY;
+  const secret = process.env.HIGGSFIELD_SECRET;
+
+  if (!apiKey || !secret) {
+    return res.status(200).json({
+      success: false,
+      needsApiKey: true,
+      message: "HIGGSFIELD_API_KEY and HIGGSFIELD_SECRET are required in Replit Secrets."
+    });
+  }
+
+  try {
+    if (type === "image") {
+      const response = await fetch("https://api.higgsfield.ai/v1/images/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Secret": secret,
+        },
+        body: JSON.stringify({ prompt, model: "soul", num_images: 1, aspect_ratio: "16:9" }),
+      });
+      const data = await response.json() as any;
+      res.json({ success: true, jobId: data.job_id, imageUrl: data.images?.[0]?.url });
+    } else {
+      // Video via Seedance 2.0
+      const response = await fetch("https://api.higgsfield.ai/v1/videos/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Secret": secret,
+        },
+        body: JSON.stringify({ prompt, model: "seedance-2.0", image_url: imageUrl, duration: 5 }),
+      });
+      const data = await response.json() as any;
+      res.json({ success: true, jobId: data.job_id, videoUrl: data.video_url });
+    }
+  } catch (error: any) {
+    console.error("Higgsfield shot generation failed:", error.message);
+    res.json({ success: false, message: error.message });
+  }
+});
+
+// Job status polling
+app.get("/api/job-status/:jobId", async (req, res) => {
+  const { jobId } = req.params;
+  const apiKey = process.env.HIGGSFIELD_API_KEY;
+  const secret = process.env.HIGGSFIELD_SECRET;
+
+  if (!apiKey || !secret) {
+    return res.status(200).json({ success: false, needsApiKey: true });
+  }
+
+  try {
+    const response = await fetch(`https://api.higgsfield.ai/v1/jobs/${jobId}`, {
+      headers: { "Authorization": `Bearer ${apiKey}`, "X-Secret": secret },
+    });
+    const data = await response.json() as any;
+    res.json({ success: true, status: data.status, result: data.result });
+  } catch (error: any) {
+    res.json({ success: false, message: error.message });
+  }
+});
+
 // Serve frontend assets
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
