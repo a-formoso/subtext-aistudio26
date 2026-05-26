@@ -1,4 +1,47 @@
-import { StoryOption, Blueprint } from "./types";
+import { StoryOption, Blueprint, StylePreset } from "./types";
+
+export const PRESEEDED_STYLE_PRESET: StylePreset = {
+  preset_id: "SP_ORCHID_01",
+  title: "Cyber-Noir Greenhouse",
+  core_identity: {
+    weight: 60,
+    label: "Core Cinematic Identity",
+    description: "Chiaroscuro cyber-noir — deep black voids anchored by hard, single-source practical lighting. Color dominance is cool slate-black base erupting with warm bioluminescent amber from the orchid flora.",
+    elements: [
+      "Chiaroscuro hard side-key lighting",
+      "Deep shadow voids with minimal fill",
+      "Cool slate-black base palette",
+      "Warm amber / orange bioluminescent dominance",
+      "Anamorphic lens flare on glass and platinum surfaces",
+      "Photorealistic — zero stylization artifacts"
+    ]
+  },
+  secondary_influence: {
+    weight: 30,
+    label: "Secondary Stylistic Influence",
+    description: "Bio-horror genre undertones layered with sterile corporate precision. Texture logic alternates between polished synthetic surfaces and living organic matter.",
+    elements: [
+      "Bio-horror: organic systems responding to human tension",
+      "Sterile corporate minimalism (dark lava stone, hermetic glass)",
+      "Platinum and crystal metallics as power signals",
+      "35mm–50mm anamorphic preset — shallow depth of field",
+      "Slow micro-pan movements matching emotional tempo",
+      "Soft edge-rim lighting on secondary subjects"
+    ]
+  },
+  accent_layer: {
+    weight: 10,
+    label: "Accent Layer",
+    description: "Defensive orange stress-pulse as the story's visual alarm system. The signet ring rotation anchors betrayal as a recurring symbolic motif.",
+    elements: [
+      "Defensive orange stress-pulse from orchid bioluminescence",
+      "Signet ring rotation — betrayal motif anchor",
+      "Glass panel color bleed under atmospheric stress",
+      "Bone-white knuckle tension highlight",
+      "Cold blue-rim edge accent on antagonist framing"
+    ]
+  }
+};
 
 export const PRESEEDED_OPTIONS: StoryOption[] = [
   {

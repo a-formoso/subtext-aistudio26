@@ -7,6 +7,8 @@ import {
   Volume2, Film, Palette, Music, CheckCircle
 } from "lucide-react";
 import { StoryboardPanel } from "./StoryboardPanel";
+import { StylePresetPanel } from "./StylePresetPanel";
+import { PRESEEDED_STYLE_PRESET } from "../preseededData";
 import { motion, AnimatePresence } from "motion/react";
 import {
   getBlueprintSequences, getBlueprintBeats, getBlueprintLogline,
@@ -281,6 +283,9 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
           </div>
         </div>
       </div>
+
+      {/* ── Style Preset — 60/30/10 ── */}
+      <StylePresetPanel preset={PRESEEDED_STYLE_PRESET} />
 
       {/* ══ MAIN CARD — mirrors Phase 1 option card exactly ══════════════ */}
       <div className="rounded-2xl border border-orange-500/70 p-4 bg-gradient-to-br from-[#0c0c10] to-[#08080a] shadow-2xl">

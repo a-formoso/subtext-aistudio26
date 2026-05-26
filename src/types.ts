@@ -249,6 +249,23 @@ export interface CinematicShot {
   automated_image_prompt: string;
 }
 
+// ── 60/30/10 Style Preset System ────────────────────────────────────────────
+
+export interface StyleLayer {
+  weight: 60 | 30 | 10;
+  label: string;
+  description: string;
+  elements: string[];
+}
+
+export interface StylePreset {
+  preset_id: string;
+  title: string;
+  core_identity: StyleLayer;        // 60% — primary visual language, lighting logic, color dominance
+  secondary_influence: StyleLayer;  // 30% — genre modifiers, atmosphere, texture, lens behavior
+  accent_layer: StyleLayer;         // 10% — highlight colors, visual anomalies, symbolic motifs
+}
+
 export interface SubtextualBeat {
   beat_number: number;
   action: string;

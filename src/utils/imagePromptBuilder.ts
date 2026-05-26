@@ -1,16 +1,16 @@
-import type { CinematicShot } from "../types";
+import type { CinematicShot, StylePreset } from "../types";
 
 const FRAMING_MAP: Record<string, string> = {
-  "MCU":  "A macro close-up",
-  "CU":   "A close-up",
-  "ECU":  "An extreme close-up",
-  "MS":   "A medium",
-  "MLS":  "A medium long",
-  "LS":   "A long",
-  "WS":   "A wide",
-  "OTS":  "An over-the-shoulder",
-  "POV":  "A point-of-view",
-  "2S":   "A two-shot",
+  "MCU":    "A macro close-up",
+  "CU":     "A close-up",
+  "ECU":    "An extreme close-up",
+  "MS":     "A medium",
+  "MLS":    "A medium long",
+  "LS":     "A long",
+  "WS":     "A wide",
+  "OTS":    "An over-the-shoulder",
+  "POV":    "A point-of-view",
+  "2S":     "A two-shot",
   "INSERT": "An insert",
 };
 
@@ -46,12 +46,12 @@ function framingToArticle(framing: string): string {
  * Segment 4 — Environment / atmosphere:
  *   {chroma_and_lighting.environmental_vfx}.
  *
- * Segment 5 — Style suffix:
- *   Photorealistic {storyStyle} --ar 16:9
+ * Segment 5 — Style suffix (60/30/10 injected):
+ *   [60% core elements] [30% secondary influence] [10% accent] --ar 16:9
  */
 export function buildImagePrompt(
   shot: CinematicShot,
-  storyStyle = "cyber-noir style"
+  stylePreset?: StylePreset
 ): string {
   const { composition, performance_capture, chroma_and_lighting } = shot;
 
@@ -59,7 +59,25 @@ export function buildImagePrompt(
   const seg2 = performance_capture.active_kinetic_token;
   const seg3 = `${composition.lens_profile}, ${chroma_and_lighting.key_lighting}`;
   const seg4 = chroma_and_lighting.environmental_vfx;
-  const seg5 = `Photorealistic ${storyStyle} --ar 16:9`;
+
+  let seg5: string;
+  if (stylePreset) {
+    // Inject 60/30/10 layers into style suffix
+    const core60   = stylePreset.core_identity.elements.slice(0, 3).join(", ");
+    const sec30    = stylePreset.secondary_influence.elements.slice(0, 2).join(", ");
+    const acc10    = stylePreset.accent_layer.elements[0];
+    seg5 = `Photorealistic. ${core60}. ${sec30}. ${acc10} --ar 16:9`;
+  } else {
+    seg5 = "Photorealistic cyber-noir style --ar 16:9";
+  }
 
   return `${seg1}. ${seg2}. ${seg3}. ${seg4}. ${seg5}`;
+}
+
+/**
+ * Returns a compact style fingerprint string for display / logging.
+ * Format: "60% {core_label} | 30% {sec_label} | 10% {accent_label}"
+ */
+export function styleFingerprint(preset: StylePreset): string {
+  return `60% ${preset.core_identity.label} | 30% ${preset.secondary_influence.label} | 10% ${preset.accent_layer.label}`;
 }
