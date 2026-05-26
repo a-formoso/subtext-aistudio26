@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { StoryOption, Blueprint } from "./types";
 import { PRESEEDED_OPTIONS, PRESEEDED_BLUEPRINT, PRESEEDED_SCRIPT } from "./preseededData";
 import { Phase1Discovery } from "./components/Phase1Discovery";
@@ -7,10 +7,18 @@ import { Phase3Script } from "./components/Phase3Script";
 import { Phase4Visuals, type CharacterVariant } from "./components/Phase4Visuals";
 import { Phase5Shots } from "./components/Phase5Shots";
 import { Phase6Assembly } from "./components/Phase6Assembly";
+import { LandingPage } from "./components/LandingPage";
+import { UpgradeWall } from "./components/UpgradeWall";
+import { ProductionsMenu } from "./components/ProductionsMenu";
+import { AuthModal } from "./components/AuthModal";
+import { useAuth } from "./context/AuthContext";
+import { saveProduction, type Production } from "./lib/productions";
+import { usageLabel, isLimitReached } from "./lib/accessTier";
 import { motion, AnimatePresence } from "motion/react";
-import { PanelRightOpen, PanelRightClose } from "lucide-react";
+import { PanelRightOpen, PanelRightClose, LogOut, AlertTriangle } from "lucide-react";
 
 type Phase = 1 | 2 | 3 | 4 | 5 | 6;
+type AppView = "landing" | "app" | "upgrade";
 
 const PHASES = [
   { id: 1, label: "Discovery",  short: "01", desc: "Idea → Direction" },
@@ -21,7 +29,18 @@ const PHASES = [
   { id: 6, label: "Assembly",   short: "06", desc: "Export" },
 ];
 
+const PHASE_TO_STATUS: Record<Phase, Production["status"]> = {
+  1: "discovery", 2: "blueprint", 3: "screenplay",
+  4: "visuals", 5: "shots", 6: "assembly",
+};
+
 export default function App() {
+  const { user, loading, accessTier, usage, signOut, session } = useAuth();
+
+  // View routing
+  const [view, setView] = useState<AppView>("landing");
+
+  // Production state
   const [activePhase, setActivePhase] = useState<Phase>(1);
   const [selectedOption, setSelectedOption] = useState<StoryOption>(PRESEEDED_OPTIONS[0]);
   const [lockedOptionId, setLockedOptionId] = useState<number>(PRESEEDED_OPTIONS[0].option_id);
@@ -29,7 +48,68 @@ export default function App() {
   const [scriptText, setScriptText] = useState<string>(PRESEEDED_SCRIPT);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [characterVariants, setCharacterVariants] = useState<CharacterVariant[]>([]);
+  const [productionId, setProductionId] = useState<string | null>(null);
+  const [productionTitle, setProductionTitle] = useState<string>("");
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
+  // Auto-save ref
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Routing logic ──
+  useEffect(() => {
+    if (loading) return;
+    if (!user) { setView("landing"); return; }
+    const tier = accessTier.tier;
+    if (tier === "none") { setView("upgrade"); return; }
+    setView("app");
+  }, [user, loading, accessTier]);
+
+  // ── Auto-save helper ──
+  const scheduleSave = useCallback((phase: Phase, overrides: Partial<Parameters<typeof saveProduction>[2]> = {}) => {
+    if (!user) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      const title = productionTitle || selectedOption?.title || "Untitled Production";
+      const newId = await saveProduction(user.id, productionId, {
+        title,
+        status: PHASE_TO_STATUS[phase],
+        story_data: selectedOption,
+        blueprint_data: selectedBlueprint,
+        screenplay_text: scriptText,
+        ...overrides,
+      });
+      if (newId && !productionId) setProductionId(newId);
+    }, 1200);
+  }, [user, productionId, productionTitle, selectedOption, selectedBlueprint, scriptText]);
+
+  // ── Resume production ──
+  const handleResume = useCallback((prod: Production) => {
+    setProductionId(prod.id);
+    setProductionTitle(prod.title || "");
+    if (prod.story_data) setSelectedOption(prod.story_data);
+    if (prod.blueprint_data) setSelectedBlueprint(prod.blueprint_data);
+    if (prod.screenplay_text) setScriptText(prod.screenplay_text);
+    const phaseMap: Record<Production["status"], Phase> = {
+      discovery: 1, blueprint: 2, screenplay: 3, visuals: 4, shots: 5, assembly: 6,
+    };
+    setActivePhase(phaseMap[prod.status] ?? 1);
+    setView("app");
+  }, []);
+
+  // ── New production ──
+  const handleNew = useCallback(() => {
+    setProductionId(null);
+    setProductionTitle("");
+    setSelectedOption(PRESEEDED_OPTIONS[0]);
+    setLockedOptionId(PRESEEDED_OPTIONS[0].option_id);
+    setSelectedBlueprint(PRESEEDED_BLUEPRINT);
+    setScriptText(PRESEEDED_SCRIPT);
+    setCharacterVariants([]);
+    setActivePhase(1);
+    setView("app");
+  }, []);
+
+  // ── Characters helper ──
   const getDisplayCharacters = (option: StoryOption) => {
     if (!option) return [];
     if (option.characters && Array.isArray(option.characters)) {
@@ -106,16 +186,62 @@ export default function App() {
     handleSelectOption(option);
     setLockedOptionId(option.option_id);
     setActivePhase(2);
+    scheduleSave(2, { story_data: option });
   };
 
   const handleSelectBlueprint = (blueprint: Blueprint) => {
     setSelectedBlueprint(blueprint);
     setActivePhase(3);
+    scheduleSave(3, { blueprint_data: blueprint });
+  };
+
+  const handleProceedToVisuals = () => {
+    setActivePhase(4);
+    scheduleSave(4, { screenplay_text: scriptText });
+  };
+
+  const handleProceedToShots = () => {
+    setActivePhase(5);
+    scheduleSave(5);
+  };
+
+  const handleProceedToAssembly = () => {
+    setActivePhase(6);
+    scheduleSave(6);
   };
 
   const stressLevel = selectedOption?.option_id === 3 ? 88 : selectedOption?.option_id === 2 ? 58 : 32;
   const stressColor = stressLevel >= 80 ? "bg-red-500" : stressLevel >= 50 ? "bg-amber-500" : "bg-emerald-500";
 
+  // ── Usage pill color ──
+  const shotLimit = accessTier.shot_generations_limit;
+  const shotUsed = usage.shot_generations_used;
+  const shotAtLimit = isLimitReached(shotUsed, shotLimit);
+  const shotNearLimit = !shotAtLimit && shotLimit !== null && shotUsed >= shotLimit * 0.8;
+
+  // ── Loading splash ──
+  if (loading) {
+    return (
+      <div className="h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 bg-[#FF3D00] rounded-sm animate-pulse" />
+          <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">Loading…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Landing ──
+  if (view === "landing") {
+    return <LandingPage onAuthenticated={() => setView("app")} />;
+  }
+
+  // ── Upgrade wall ──
+  if (view === "upgrade") {
+    return <UpgradeWall />;
+  }
+
+  // ── Main App ──
   return (
     <div className="h-screen overflow-hidden bg-[#08080a] text-gray-200 flex flex-col font-sans select-text">
       <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-orange-950/5 to-transparent pointer-events-none z-0" />
@@ -125,10 +251,10 @@ export default function App() {
         {/* ── Nav Header ── */}
         <nav className="h-14 border-b border-white/10 flex items-center justify-between px-5 bg-black/40 backdrop-blur-md shrink-0 gap-4">
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-7 h-7 bg-orange-600 rounded-sm flex items-center justify-center font-bold text-white text-xs tracking-tighter">IS</div>
+            <div className="w-7 h-7 bg-[#FF3D00] rounded-sm flex items-center justify-center font-bold text-white text-xs tracking-tighter">IS</div>
             <div className="hidden sm:block">
               <h1 className="text-xs font-bold tracking-widest uppercase text-white leading-none">Infinite Studio</h1>
-              <p className="text-[9px] text-orange-500 uppercase tracking-widest leading-none mt-0.5">Screenwriting Playbook v4.1</p>
+              <p className="text-[9px] text-[#FF3D00] uppercase tracking-widest leading-none mt-0.5">Screenwriting Playbook v4.1</p>
             </div>
           </div>
 
@@ -142,7 +268,7 @@ export default function App() {
                   <button
                     onClick={() => setActivePhase(p.id as Phase)}
                     className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      isActive ? "bg-orange-600 text-white" :
+                      isActive ? "bg-[#FF3D00] text-white" :
                       isDone ? "bg-white/10 text-emerald-400 hover:bg-white/15" :
                       "bg-white/3 text-slate-600 hover:bg-white/8 hover:text-slate-400"
                     }`}
@@ -159,11 +285,33 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Ambient greenhouse dot */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/8 bg-white/3">
-              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${stressColor}`} />
-              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{stressLevel}%</span>
+            {/* Usage pill */}
+            <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-mono uppercase tracking-wider transition-colors ${
+              shotAtLimit ? "border-red-500/40 bg-red-500/10 text-red-400" :
+              shotNearLimit ? "border-amber-500/40 bg-amber-500/10 text-amber-400" :
+              "border-white/8 bg-white/3 text-slate-500"
+            }`}>
+              {(shotAtLimit || shotNearLimit) && <AlertTriangle className="w-2.5 h-2.5" />}
+              <span>Shots {usageLabel(shotUsed, shotLimit)}</span>
             </div>
+
+            {/* Tier badge */}
+            {accessTier.tier !== "none" && (
+              <div className="hidden md:flex items-center gap-1 px-2 py-1 rounded-full border border-white/8 bg-white/3 text-[9px] font-mono text-slate-500 uppercase tracking-wider">
+                {accessTier.tier === "trial" && "Trial"}
+                {accessTier.tier === "standard" && "Studio Lot"}
+                {accessTier.tier === "pro" && <span className="text-[#FF3D00]">Inner Circle</span>}
+              </div>
+            )}
+
+            {/* Productions menu */}
+            {user && (
+              <ProductionsMenu
+                onResume={handleResume}
+                onNew={handleNew}
+              />
+            )}
+
             {/* Sidebar toggle */}
             <button
               onClick={() => setSidebarOpen(o => !o)}
@@ -175,8 +323,32 @@ export default function App() {
                 : <PanelRightOpen className="w-3.5 h-3.5 text-slate-400" />
               }
             </button>
+
+            {/* Sign out */}
+            {user && (
+              <button
+                onClick={signOut}
+                className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+                title={`Sign out (${user.email})`}
+              >
+                <LogOut className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+            )}
           </div>
         </nav>
+
+        {/* ── Limit Banner ── */}
+        {shotAtLimit && (
+          <div className="bg-red-950/40 border-b border-red-800/30 px-5 py-2 flex items-center justify-between text-[10px] font-mono text-red-400">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="w-3 h-3" />
+              Shot generation limit reached ({shotLimit}/{shotLimit} used this month).
+            </span>
+            <a href="https://infinitestudioai.com/membership" target="_blank" rel="noreferrer" className="text-[#FF3D00] hover:underline">
+              Upgrade →
+            </a>
+          </div>
+        )}
 
         {/* ── Body ── */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -189,7 +361,7 @@ export default function App() {
                 onClick={() => setActivePhase(p.id as Phase)}
                 className={`group relative w-9 h-9 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
                   activePhase === p.id
-                    ? "border-orange-500/50 bg-orange-500/10 text-orange-500"
+                    ? "border-[#FF3D00]/50 bg-[#FF3D00]/10 text-[#FF3D00]"
                     : (activePhase as number) > p.id
                     ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600"
                     : "border-white/10 bg-white/5 text-slate-600 hover:border-white/20 hover:text-slate-400"
@@ -205,7 +377,7 @@ export default function App() {
             <div className="hidden md:block mt-auto mb-3">
               <div className="w-0.5 h-24 bg-white/5 rounded-full relative overflow-hidden">
                 <div
-                  className="absolute top-0 w-full bg-orange-600/60 transition-all duration-500"
+                  className="absolute top-0 w-full bg-[#FF3D00]/60 transition-all duration-500"
                   style={{ height: `${((activePhase - 1) / 5) * 100}%` }}
                 />
               </div>
@@ -225,12 +397,14 @@ export default function App() {
                     {(activePhase <= 3) ? (selectedOption?.title || "Story Blueprint Engine") : PHASES.find(p => p.id === activePhase)?.desc}
                   </h2>
                 </div>
-                {activePhase <= 3 && (
-                  <div className="text-right hidden sm:block">
-                    <span className="text-[9px] text-gray-500 font-mono tracking-tighter uppercase block">Active Target</span>
-                    <span className="text-[10px] font-mono text-gray-400 font-semibold uppercase">OPTION-0{selectedOption?.option_id || 1}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-3">
+                  {activePhase <= 3 && (
+                    <div className="text-right hidden sm:block">
+                      <span className="text-[9px] text-gray-500 font-mono tracking-tighter uppercase block">Active Target</span>
+                      <span className="text-[10px] font-mono text-gray-400 font-semibold uppercase">OPTION-0{selectedOption?.option_id || 1}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <AnimatePresence mode="wait">
@@ -261,13 +435,13 @@ export default function App() {
                       blueprint={selectedBlueprint}
                       selectedScriptText={scriptText}
                       onUpdateScriptText={setScriptText}
-                      onProceedToVisuals={() => setActivePhase(4)}
+                      onProceedToVisuals={handleProceedToVisuals}
                     />
                   )}
                   {activePhase === 4 && (
                     <Phase4Visuals
                       selectedOption={selectedOption}
-                      onProceed={() => setActivePhase(5)}
+                      onProceed={handleProceedToShots}
                       characterVariants={characterVariants}
                       onAddVariant={(v) => setCharacterVariants(prev => [...prev, v])}
                     />
@@ -275,7 +449,7 @@ export default function App() {
                   {activePhase === 5 && (
                     <Phase5Shots
                       blueprint={selectedBlueprint}
-                      onProceed={() => setActivePhase(6)}
+                      onProceed={handleProceedToAssembly}
                       characterVariants={characterVariants}
                     />
                   )}
@@ -300,7 +474,43 @@ export default function App() {
                   className="shrink-0 bg-[#0a0a0e] overflow-hidden border-t lg:border-t-0 border-white/10"
                 >
                   <div className="w-[280px] p-4 flex flex-col gap-4 h-full overflow-y-auto">
-                    <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest font-bold">Dev / Data Panel</span>
+                    <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest font-bold">Session · Data Panel</span>
+
+                    {/* User info */}
+                    {user && (
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest block">Account</span>
+                        <p className="text-[10px] font-mono text-white truncate">{user.email}</p>
+                        <div className="flex items-center justify-between text-[9px] font-mono text-slate-500">
+                          <span>Tier: <span className="text-[#FF3D00] uppercase">{accessTier.tier}</span></span>
+                          {productionId && <span className="text-emerald-500">● Saved</span>}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Usage meters */}
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2.5">
+                      <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest block">Monthly Usage</span>
+                      {[
+                        { label: "Shots", used: usage.shot_generations_used, limit: accessTier.shot_generations_limit },
+                        { label: "Grids", used: usage.character_grids_used, limit: accessTier.character_grids_limit },
+                        { label: "Videos", used: usage.video_promotions_used, limit: accessTier.video_promotions_limit },
+                      ].map(({ label, used, limit }) => {
+                        const pct = limit === null ? 10 : limit === 0 ? 100 : Math.min(100, (used / limit) * 100);
+                        const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500";
+                        return (
+                          <div key={label}>
+                            <div className="flex justify-between text-[9px] font-mono text-slate-500 mb-1">
+                              <span>{label}</span>
+                              <span>{usageLabel(used, limit)}</span>
+                            </div>
+                            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                              <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
 
                     {/* Greenhouse mini-monitor */}
                     <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
@@ -377,11 +587,19 @@ export default function App() {
             <span className="hidden md:inline">Phases 1–6 Pipeline</span>
           </div>
           <div className="flex gap-3">
-            <span>INFINITE_STUDIO_ALPHA</span>
+            <span>A product of Infinite Studio AI · <a href="https://infinitestudioai.com" target="_blank" rel="noreferrer" className="hover:text-slate-400 transition-colors">infinitestudioai.com</a></span>
           </div>
         </footer>
 
       </div>
+
+      {/* Auth modal (accessible from within app) */}
+      <AuthModal
+        open={authModalOpen}
+        initialMode="signin"
+        onClose={() => setAuthModalOpen(false)}
+        onAuthenticated={() => { setAuthModalOpen(false); setView("app"); }}
+      />
     </div>
   );
 }

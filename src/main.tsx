@@ -1,10 +1,26 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { AuthProvider } from './context/AuthContext.tsx';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+async function init() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    (window as any).__SUPABASE_URL__ = cfg.supabaseUrl;
+    (window as any).__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
+  } catch (e) {
+    console.error('Failed to load config', e);
+  }
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </StrictMode>,
+  );
+}
+
+init();

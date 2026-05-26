@@ -4,6 +4,16 @@ import { getBlueprintSequences, getBlueprintBeats, getStoryCharacters } from "..
 import { Sparkles, Film, ArrowRight, Play, AlertCircle, RefreshCw, ChevronRight, RotateCcw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { CharacterVariant } from "./Phase4Visuals";
+import { supabase } from "../lib/supabase";
+
+async function getAuthHeader(): Promise<Record<string, string>> {
+  try {
+    const { data } = await (supabase as any).auth.getSession();
+    const token = data?.session?.access_token;
+    if (token) return { "Authorization": `Bearer ${token}` };
+  } catch {}
+  return {};
+}
 
 interface Phase5ShotsProps {
   blueprint: Blueprint;
@@ -146,9 +156,10 @@ export function Phase5Shots({ blueprint, onProceed, characterVariants = [] }: Ph
     const prev = jobs[shot.shotId];
     setJobs(j => ({ ...j, [shot.shotId]: { ...(prev || {}), shotId: shot.shotId, status: "generating", prompt } }));
     try {
+      const authHeader = await getAuthHeader();
       const resp = await fetch("/api/generate-shot", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
         body: JSON.stringify({ shotId: shot.shotId, prompt, type: "image" }),
       });
       const data = await resp.json();
@@ -172,9 +183,10 @@ export function Phase5Shots({ blueprint, onProceed, characterVariants = [] }: Ph
     if (!job) return;
     setJobs(j => ({ ...j, [shot.shotId]: { ...job, status: "generating" } }));
     try {
+      const authHeader = await getAuthHeader();
       const resp = await fetch("/api/generate-shot", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
         body: JSON.stringify({ shotId: shot.shotId, prompt: job.prompt, type: "video", imageUrl: job.imageUrl }),
       });
       const data = await resp.json();

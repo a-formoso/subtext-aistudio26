@@ -7,6 +7,16 @@ import {
   ChevronDown, ChevronRight, Eye, RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { supabase } from "../lib/supabase";
+
+async function getAuthHeader(): Promise<Record<string, string>> {
+  try {
+    const { data } = await (supabase as any).auth.getSession();
+    const token = data?.session?.access_token;
+    if (token) return { "Authorization": `Bearer ${token}` };
+  } catch {}
+  return {};
+}
 
 interface Phase4VisualsProps {
   selectedOption: StoryOption;
@@ -96,9 +106,10 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
     setAssets(prev => ({ ...prev, [assetId]: { id: assetId, status: "generating", prompt } }));
     setApprovedIds(prev => { const next = new Set(prev); next.delete(assetId); return next; });
     try {
+      const authHeader = await getAuthHeader();
       const resp = await fetch("/api/generate-visual", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
         body: JSON.stringify({ assetId, prompt, ...(negativePrompt ? { negativePrompt } : {}) }),
       });
       const data = await resp.json();

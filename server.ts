@@ -3,6 +3,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { verifyToken, resolveAccessTier, checkAndIncrementUsage } from "./server/supabaseAdmin";
 
 // Load environment variables
 dotenv.config();
@@ -44,6 +45,14 @@ function getGeminiClient(): GoogleGenAI {
   }
   return aiClient;
 }
+
+// Config endpoint — exposes public Supabase credentials to the browser
+app.get("/api/config", (req, res) => {
+  res.json({
+    supabaseUrl: process.env.SUPABASE_URL || "",
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
+  });
+});
 
 // API endpoint to check if Gemini key is available
 app.get("/api/gemini-check", (req, res) => {
@@ -371,6 +380,16 @@ Include the visual_flora color shifts (e.g., violet, pale yellow, mottled, defen
 
 // Phase 4: Generate visual asset via Higgsfield
 app.post("/api/generate-visual", async (req, res) => {
+  // Auth + usage check
+  const userId = await verifyToken(req.headers.authorization);
+  if (userId) {
+    const tier = await resolveAccessTier(userId);
+    const check = await checkAndIncrementUsage(userId, "character_grids_used", tier);
+    if (!check.allowed) {
+      return res.status(403).json({ success: false, limitReached: true, message: `Character grid limit reached (${check.limit}/month).` });
+    }
+  }
+
   const { assetId, prompt, negativePrompt } = req.body;
   const apiKey = process.env.HIGGSFIELD_API_KEY;
   const secret = process.env.HIGGSFIELD_SECRET;
@@ -421,6 +440,17 @@ app.post("/api/generate-visual", async (req, res) => {
 
 // Phase 5: Generate shot image or video via Higgsfield Seedance 2.0
 app.post("/api/generate-shot", async (req, res) => {
+  // Auth + usage check
+  const userId = await verifyToken(req.headers.authorization);
+  if (userId) {
+    const tier = await resolveAccessTier(userId);
+    const field = (req.body.type === "video") ? "video_promotions_used" : "shot_generations_used";
+    const check = await checkAndIncrementUsage(userId, field, tier);
+    if (!check.allowed) {
+      return res.status(403).json({ success: false, limitReached: true, message: `Limit reached (${check.limit}/month).` });
+    }
+  }
+
   const { shotId, prompt, type, imageUrl } = req.body;
   const apiKey = process.env.HIGGSFIELD_API_KEY;
   const secret = process.env.HIGGSFIELD_SECRET;
