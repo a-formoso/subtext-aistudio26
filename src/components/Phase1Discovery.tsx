@@ -30,6 +30,7 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
   const [expandedMonologueCharId, setExpandedMonologueCharId] = useState<string | null>(null);
   const [expandedKineticsCharId, setExpandedKineticsCharId] = useState<string | null>(null);
   const [expandedPsychCharId, setExpandedPsychCharId] = useState<string | null>(null);
+  const [propsExpanded, setPropsExpanded] = useState(false);
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null);
   const [activeCharIndex, setActiveCharIndex] = useState<number>(0);
   const [leftTab, setLeftTab] = useState<"env" | "dialectic">("env");
@@ -273,17 +274,31 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                     </div>
 
                     {meaning.props_sheet && meaning.props_sheet.length > 0 && (
-                      <div className="border-t border-white/8 pt-3 space-y-2">
-                        <span className="font-mono text-[9px] text-slate-400 tracking-widest uppercase font-bold block">Props</span>
-                        {meaning.props_sheet.map((prop, i) => (
-                          <div key={i} className="flex items-start gap-2.5 bg-black/40 border border-white/8 rounded-lg p-2.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0 mt-1" />
-                            <div>
-                              <span className="font-mono text-[9px] font-bold text-orange-300 block mb-0.5">{prop.name}</span>
-                              <p className="text-[10px] text-slate-400 leading-snug">{prop.description}</p>
-                            </div>
+                      <div className="bg-black/30 border border-white/8 rounded-xl overflow-hidden">
+                        <button
+                          onClick={() => setPropsExpanded(v => !v)}
+                          className={`w-full flex items-center justify-between p-2.5 transition-colors text-left ${
+                            propsExpanded ? "bg-white/15 hover:bg-white/20" : "hover:bg-white/5"
+                          }`}
+                        >
+                          <span className="font-mono text-[9px] uppercase font-bold tracking-wider text-slate-200">Props</span>
+                          <span className="font-mono text-[9px] font-bold text-slate-400">
+                            {propsExpanded ? "[ Hide ]" : "[ Expand ]"}
+                          </span>
+                        </button>
+                        {propsExpanded && (
+                          <div className="p-3 border-t border-white/8 bg-black/50 space-y-2">
+                            {meaning.props_sheet.map((prop, i) => (
+                              <div key={i} className="flex items-start gap-2.5 bg-black/40 border border-white/8 rounded-lg p-2.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0 mt-1" />
+                                <div>
+                                  <span className="font-mono text-[9px] font-bold text-orange-300 block mb-0.5">{prop.name}</span>
+                                  <p className="text-[10px] text-slate-400 leading-snug">{prop.description}</p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </motion.div>
