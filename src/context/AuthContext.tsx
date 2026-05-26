@@ -33,15 +33,27 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 /**
- * Derive TierName from active_subscription_tier string stored in the `users` table.
- * Matches case-insensitively against plan name patterns.
+ * Map a studio_plan string to a TierName.
  */
-function tierFromSubscriptionValue(val: string | null | undefined): TierName | null {
+function studioPlantToTier(val: string | null | undefined): TierName | null {
+  if (!val) return null;
+  const v = val.toLowerCase().trim();
+  if (v === "playwright") return "playwright";
+  if (v === "director") return "director";
+  if (v === "studio") return "studio";
+  return null;
+}
+
+/**
+ * Map an IS membership active_subscription_tier to a Studio TierName.
+ * IS members get Director-equivalent access at minimum.
+ */
+function membershipTierToStudio(val: string | null | undefined): TierName | null {
   if (!val) return null;
   const v = val.toLowerCase().replace(/[_\s-]/g, "");
-  if (v.includes("innercircle") || v.includes("inner")) return "pro";
-  // Any other active tier → standard (Studio Lot, quarterly, annual, etc.)
-  return "standard";
+  if (v.includes("innercircle") || v.includes("inner")) return "studio";
+  if (v.length > 0) return "director";
+  return null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -56,21 +68,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resolveAccess = useCallback(async (uid: string) => {
     try {
       let tier: TierName = "none";
+      let profileTrialUsed = true; // default safe: no trial
 
-      // ── Step 1: Check the `users` table (supabase_id = auth uid) ──
-      // This is the source of truth for subscription status in the existing project.
-      const { data: userRow, error: userErr } = await supabase
-        .from("users")
-        .select("active_subscription_tier")
-        .eq("supabase_id", uid)
+      // ── Step 1: user_profiles — studio_plan + trial flag ──
+      // studio_plan is the canonical source for Studio standalone subscriptions.
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("studio_plan, studio_trial_used")
+        .eq("id", uid)
         .maybeSingle();
 
-      if (!userErr && userRow) {
-        const derivedTier = tierFromSubscriptionValue(userRow.active_subscription_tier);
-        if (derivedTier) tier = derivedTier;
+      if (profile !== null && profile !== undefined) {
+        profileTrialUsed = profile.studio_trial_used ?? true;
+        const planTier = studioPlantToTier(profile.studio_plan);
+        if (planTier) tier = planTier;
       }
 
-      // ── Step 2: If still no subscription, also check app_subscriptions ──
+      // ── Step 2: IS membership — users.active_subscription_tier ──
+      // IS members get director-equivalent or better if they have no explicit studio_plan.
+      if (tier === "none") {
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("active_subscription_tier")
+          .eq("supabase_id", uid)
+          .maybeSingle();
+
+        const memberTier = membershipTierToStudio(userRow?.active_subscription_tier);
+        if (memberTier) tier = memberTier;
+      }
+
+      // ── Step 3: app_subscriptions fallback ──
       if (tier === "none") {
         const { data: appSub } = await supabase
           .from("app_subscriptions")
@@ -81,42 +108,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (appSub) {
-          const derivedTier = tierFromSubscriptionValue(appSub.plan_name);
-          if (derivedTier) {
-            tier = derivedTier;
-          } else if (appSub.amount && Number(appSub.amount) >= 297) {
-            tier = "pro";
+          const planTier = studioPlantToTier(appSub.plan_name);
+          if (planTier) {
+            tier = planTier;
           } else {
-            tier = "standard";
+            const memberTier = membershipTierToStudio(appSub.plan_name);
+            tier = memberTier ?? "director";
           }
         }
       }
 
-      // ── Step 3: If still no subscription, check trial eligibility ──
+      // ── Step 4: trial — only if profile row exists and studio_trial_used = false ──
       if (tier === "none") {
-        // user_profiles.studio_trial_used must be explicitly false to grant trial.
-        // If the table/row doesn't exist yet, default is: NO trial (user must subscribe).
-        const { data: profile, error: profileErr } = await supabase
-          .from("user_profiles")
-          .select("studio_trial_used")
-          .eq("id", uid)
-          .maybeSingle();
-
-        if (!profileErr && profile !== null && profile.studio_trial_used === false) {
+        setTrialUsed(profileTrialUsed);
+        if (profile !== null && profile !== undefined && !profileTrialUsed) {
           tier = "trial";
-          setTrialUsed(false);
-        } else {
-          // No profile row means this user has not been granted a trial.
-          // If profile exists with studio_trial_used = true, trial is exhausted.
-          setTrialUsed(true);
-          tier = "none";
         }
       }
 
-      console.log(`[AuthContext] uid=${uid} → tier=${tier}`);
+      console.log(`[AuthContext] uid=${uid.slice(0, 8)}… → tier=${tier}`);
       setAccessTier(TIERS[tier]);
 
-      // ── Step 4: Load current month usage ──
+      // ── Step 5: load current month usage ──
       const month = new Date().toISOString().slice(0, 7);
       const { data: usageRow } = await supabase
         .from("studio_usage")
@@ -133,7 +146,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     } catch (e) {
       console.error("resolveAccess error:", e);
-      // On unexpected error, fail safe — deny access rather than grant it
       setAccessTier(TIERS.none);
     }
   }, []);

@@ -1,7 +1,9 @@
-export type TierName = "none" | "trial" | "standard" | "pro";
+export type TierName = "none" | "trial" | "playwright" | "director" | "studio";
 
 export interface AccessTier {
   tier: TierName;
+  /** Highest phase number allowed. playwright=3, all others=6 */
+  phases_allowed: number;
   studio_productions_limit: number | null;
   character_grids_limit: number | null;
   shot_generations_limit: number | null;
@@ -11,6 +13,7 @@ export interface AccessTier {
 export const TIERS: Record<TierName, AccessTier> = {
   none: {
     tier: "none",
+    phases_allowed: 0,
     studio_productions_limit: 0,
     character_grids_limit: 0,
     shot_generations_limit: 0,
@@ -18,22 +21,33 @@ export const TIERS: Record<TierName, AccessTier> = {
   },
   trial: {
     tier: "trial",
+    phases_allowed: 3,
     studio_productions_limit: 1,
-    character_grids_limit: 10,
-    shot_generations_limit: 20,
-    video_promotions_limit: 5,
+    character_grids_limit: 0,
+    shot_generations_limit: 0,
+    video_promotions_limit: 0,
   },
-  standard: {
-    tier: "standard",
-    studio_productions_limit: 2,
-    character_grids_limit: 10,
-    shot_generations_limit: 20,
-    video_promotions_limit: 5,
+  playwright: {
+    tier: "playwright",
+    phases_allowed: 3,
+    studio_productions_limit: 3,
+    character_grids_limit: 0,
+    shot_generations_limit: 0,
+    video_promotions_limit: 0,
   },
-  pro: {
-    tier: "pro",
+  director: {
+    tier: "director",
+    phases_allowed: 6,
+    studio_productions_limit: 3,
+    character_grids_limit: 15,
+    shot_generations_limit: 30,
+    video_promotions_limit: 10,
+  },
+  studio: {
+    tier: "studio",
+    phases_allowed: 6,
     studio_productions_limit: null,
-    character_grids_limit: null,
+    character_grids_limit: 50,
     shot_generations_limit: 150,
     video_promotions_limit: 50,
   },
@@ -58,4 +72,8 @@ export function usageLabel(used: number, limit: number | null): string {
 export function isLimitReached(used: number, limit: number | null): boolean {
   if (limit === null) return false;
   return used >= limit;
+}
+
+export function canAccessPhase(tier: AccessTier, phase: number): boolean {
+  return phase <= tier.phases_allowed;
 }

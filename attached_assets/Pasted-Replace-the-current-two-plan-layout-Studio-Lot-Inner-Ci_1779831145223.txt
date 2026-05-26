@@ -1,0 +1,34 @@
+Replace the current two-plan layout (Studio Lot / Inner Circle) with three new Studio-specific subscription tiers. These are separate from the Infinite Studio membership and have their own pricing. Billing will be handled externally — Subscribe buttons link out to the payment page (placeholder URL for now: #).
+Header section (keep the lock icon and existing headline/body copy)
+Add a small banner above the plan cards:
+Already an Infinite Studio member? You qualify for member pricing. Sign in to apply.
+Style: subtle, amber/gold text, no background — one line, centered.
+Three plan cards in a row (not two):
+Card 1 — PLAYWRIGHT
+
+Label: SCRIPT ONLY
+Price: $19/mo · member price: $14/mo
+Features: 3 full productions/month (idea → screenplay), Unlimited story directions, Script export (PDF), No visual generation
+CTA button: outline style, "Start Writing →"
+Color accent: blue
+
+Card 2 — DIRECTOR (highlighted as recommended)
+
+Label: MOST POPULAR
+Price: $49/mo · member price: $39/mo
+Features: 3 productions/month incl. visuals, 15 character reference grids, 30 shot generations (image), 10 video promotions (Seedance 2.0), ElevenLabs audio per character
+CTA button: filled orange, "Start Directing →"
+Color accent: orange, slightly larger card or highlighted border
+
+Card 3 — STUDIO
+
+Label: PRODUCTION HOUSE
+Price: $149/mo · member price: $119/mo
+Features: Unlimited screenplay productions, 50 character grids, 150 shot generations, 50 video promotions, Priority generation queue, Commercial rights on all output
+CTA button: filled white, dark text, "Open the Studio →"
+Color accent: white/silver
+
+Below the cards, one line of small text:
+Need more credits mid-production? Top up with a credit pack — $9 for 5 shot generations or 1 character grid.
+Keep the existing "Already subscribed? Sign in" line and sign out link at the bottom.
+Access gating logic update: add a studio_plan field check (separate from the IS membership subscriptions table). For now, if studio_plan is null or missing, show this upgrade wall. If studio_plan = 'playwright', allow Phases 1–3 only, block Phase 4+ with an inline upsell. If studio_plan = 'director' or 'studio', allow all phases based on the credit limits defined above.

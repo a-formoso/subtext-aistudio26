@@ -14,7 +14,8 @@ import { AuthModal } from "./components/AuthModal";
 import { useAuth } from "./context/AuthContext";
 import { supabase } from "./lib/supabase";
 import { saveProduction, type Production } from "./lib/productions";
-import { usageLabel, isLimitReached } from "./lib/accessTier";
+import { usageLabel, isLimitReached, canAccessPhase } from "./lib/accessTier";
+import { PhaseUpsell } from "./components/PhaseUpsell";
 import { motion, AnimatePresence } from "motion/react";
 import { PanelRightOpen, PanelRightClose, LogOut, AlertTriangle } from "lucide-react";
 
@@ -311,8 +312,9 @@ export default function App() {
             {accessTier.tier !== "none" && (
               <div className="hidden md:flex items-center gap-1 px-2 py-1 rounded-full border border-white/8 bg-white/3 text-[9px] font-mono text-slate-500 uppercase tracking-wider">
                 {accessTier.tier === "trial" && "Trial"}
-                {accessTier.tier === "standard" && "Studio Lot"}
-                {accessTier.tier === "pro" && <span className="text-[#FF3D00]">Inner Circle</span>}
+                {accessTier.tier === "playwright" && "Playwright"}
+                {accessTier.tier === "director" && <span className="text-blue-400">Director</span>}
+                {accessTier.tier === "studio" && <span className="text-[#FF3D00]">Studio</span>}
               </div>
             )}
 
@@ -421,55 +423,62 @@ export default function App() {
 
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={activePhase}
+                  key={`${activePhase}-${accessTier.tier}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.18 }}
                 >
-                  {activePhase === 1 && (
-                    <Phase1Discovery
-                      onSelectOption={handleSelectOption}
-                      onLockOption={handleLockOption}
-                      selectedOptionId={selectedOption?.option_id}
-                      lockedOptionId={lockedOptionId}
-                    />
-                  )}
-                  {activePhase === 2 && (
-                    <Phase2Blueprint
-                      chosenOption={selectedOption}
-                      onSelectBlueprint={handleSelectBlueprint}
-                      selectedBlueprint={selectedBlueprint}
-                    />
-                  )}
-                  {activePhase === 3 && (
-                    <Phase3Script
-                      blueprint={selectedBlueprint}
-                      selectedScriptText={scriptText}
-                      onUpdateScriptText={setScriptText}
-                      onProceedToVisuals={handleProceedToVisuals}
-                    />
-                  )}
-                  {activePhase === 4 && (
-                    <Phase4Visuals
-                      selectedOption={selectedOption}
-                      onProceed={handleProceedToShots}
-                      characterVariants={characterVariants}
-                      onAddVariant={(v) => setCharacterVariants(prev => [...prev, v])}
-                    />
-                  )}
-                  {activePhase === 5 && (
-                    <Phase5Shots
-                      blueprint={selectedBlueprint}
-                      onProceed={handleProceedToAssembly}
-                      characterVariants={characterVariants}
-                    />
-                  )}
-                  {activePhase === 6 && (
-                    <Phase6Assembly
-                      blueprint={selectedBlueprint}
-                      onBack={() => setActivePhase(5)}
-                    />
+                  {/* Phase gate: playwright/trial users are blocked at Phase 4+ */}
+                  {!canAccessPhase(accessTier, activePhase) ? (
+                    <PhaseUpsell currentPhase={activePhase} />
+                  ) : (
+                    <>
+                      {activePhase === 1 && (
+                        <Phase1Discovery
+                          onSelectOption={handleSelectOption}
+                          onLockOption={handleLockOption}
+                          selectedOptionId={selectedOption?.option_id}
+                          lockedOptionId={lockedOptionId}
+                        />
+                      )}
+                      {activePhase === 2 && (
+                        <Phase2Blueprint
+                          chosenOption={selectedOption}
+                          onSelectBlueprint={handleSelectBlueprint}
+                          selectedBlueprint={selectedBlueprint}
+                        />
+                      )}
+                      {activePhase === 3 && (
+                        <Phase3Script
+                          blueprint={selectedBlueprint}
+                          selectedScriptText={scriptText}
+                          onUpdateScriptText={setScriptText}
+                          onProceedToVisuals={handleProceedToVisuals}
+                        />
+                      )}
+                      {activePhase === 4 && (
+                        <Phase4Visuals
+                          selectedOption={selectedOption}
+                          onProceed={handleProceedToShots}
+                          characterVariants={characterVariants}
+                          onAddVariant={(v) => setCharacterVariants(prev => [...prev, v])}
+                        />
+                      )}
+                      {activePhase === 5 && (
+                        <Phase5Shots
+                          blueprint={selectedBlueprint}
+                          onProceed={handleProceedToAssembly}
+                          characterVariants={characterVariants}
+                        />
+                      )}
+                      {activePhase === 6 && (
+                        <Phase6Assembly
+                          blueprint={selectedBlueprint}
+                          onBack={() => setActivePhase(5)}
+                        />
+                      )}
+                    </>
                   )}
                 </motion.div>
               </AnimatePresence>
