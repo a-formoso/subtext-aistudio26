@@ -27,6 +27,9 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
 
   const [playingMonologueCharId, setPlayingMonologueCharId] = useState<string | null>(null);
   const [expandedVisualsCharId, setExpandedVisualsCharId] = useState<string | null>(null);
+  const [expandedMonologueCharId, setExpandedMonologueCharId] = useState<string | null>(null);
+  const [expandedKineticsCharId, setExpandedKineticsCharId] = useState<string | null>(null);
+  const [expandedPsychCharId, setExpandedPsychCharId] = useState<string | null>(null);
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null);
   const [activeCharIndex, setActiveCharIndex] = useState<number>(0);
   const [leftTab, setLeftTab] = useState<"env" | "dialectic">("env");
@@ -400,53 +403,98 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                       </div>
                     </div>
 
-                    {/* Monologue preview */}
-                    <div className="rounded-xl border border-white/8 bg-black/30 p-2.5 flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[9px] uppercase font-mono text-slate-400 font-bold tracking-wider block">Worldview Monologue</span>
-                        <p className={`text-[10px] mt-0.5 italic font-sans ${
-                          playingMonologueCharId === char.id ? "text-white animate-pulse" : "text-slate-400 truncate"
-                        }`}>
-                          "{char.audio.monologue_script || "No seed worldview written yet."}"
-                        </p>
-                      </div>
+                    {/* Monologue preview — collapsible */}
+                    <div className="bg-black/30 border border-white/8 rounded-xl overflow-hidden">
                       <button
-                        onClick={() => setPlayingMonologueCharId(playingMonologueCharId === char.id ? null : char.id)}
-                        className="shrink-0 px-2.5 py-1 text-[9px] font-mono font-bold bg-white/10 hover:bg-white/20 border border-white/20 text-slate-200 hover:text-white rounded flex items-center gap-1.5 cursor-pointer transition-colors"
+                        onClick={() => setExpandedMonologueCharId(expandedMonologueCharId === char.id ? null : char.id)}
+                        className={`w-full flex items-center justify-between p-2.5 transition-colors text-left ${
+                          expandedMonologueCharId === char.id ? "bg-white/15 hover:bg-white/20" : "hover:bg-white/5"
+                        }`}
                       >
-                        <Volume2 className="w-3 h-3" />
-                        {playingMonologueCharId === char.id ? "Pause" : "Simulate"}
+                        <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase font-bold tracking-wider text-slate-200">
+                          <Volume2 className="w-3 h-3 text-slate-400" />
+                          Worldview Monologue
+                        </span>
+                        <span className="font-mono text-[9px] font-bold text-slate-400">
+                          {expandedMonologueCharId === char.id ? "[ Hide ]" : "[ Expand ]"}
+                        </span>
                       </button>
-                    </div>
-
-                    {/* Kinetics — 3 columns */}
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: "How They Carry Themselves", value: char.kinetics.posture },
-                        { label: "Nervous Habits", value: char.kinetics.gesture_vocabulary },
-                        { label: "How They React", value: char.kinetics.reaction_tempo, highlight: true },
-                      ].map(({ label, value, highlight }) => (
-                        <div key={label} className="bg-white/5 p-2 rounded-lg border border-white/8">
-                          <span className="text-slate-500 font-mono text-[8px] uppercase tracking-wider block mb-0.5">{label}</span>
-                          <span className="font-medium leading-tight text-[10px] text-slate-100">
-                            {value}
-                          </span>
+                      {expandedMonologueCharId === char.id && (
+                        <div className="p-2.5 border-t border-white/8 bg-black/50 flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[10px] italic font-sans ${
+                              playingMonologueCharId === char.id ? "text-white animate-pulse" : "text-slate-400"
+                            }`}>
+                              "{char.audio.monologue_script || "No seed worldview written yet."}"
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setPlayingMonologueCharId(playingMonologueCharId === char.id ? null : char.id)}
+                            className="shrink-0 px-2.5 py-1 text-[9px] font-mono font-bold bg-white/10 hover:bg-white/20 border border-white/20 text-slate-200 hover:text-white rounded flex items-center gap-1.5 cursor-pointer transition-colors"
+                          >
+                            <Volume2 className="w-3 h-3" />
+                            {playingMonologueCharId === char.id ? "Pause" : "Simulate"}
+                          </button>
                         </div>
-                      ))}
+                      )}
                     </div>
 
-                    {/* Psychology — 2 columns */}
-                    <div className="grid grid-cols-2 gap-2 bg-black/40 p-3 rounded-xl border border-white/8">
-                      <div>
-                        <span className="text-slate-500 block font-mono uppercase text-[8px] tracking-wider mb-0.5">Outer Personality</span>
-                        <p className="text-white font-semibold text-[10px] leading-snug">{char.psychology.social}</p>
-                        <p className="text-slate-400 text-[9px] mt-0.5 leading-snug">{char.psychology.core}</p>
-                      </div>
-                      <div>
-                        <span className="text-orange-400 block font-mono uppercase text-[8px] tracking-wider mb-0.5">What They're Hiding</span>
-                        <p className="text-orange-300 font-semibold text-[10px] leading-snug">{char.psychology.hidden}</p>
-                        <p className="text-slate-400 text-[9px] mt-0.5 leading-snug">{char.psychology.personal}</p>
-                      </div>
+                    {/* Kinetics — collapsible */}
+                    <div className="bg-black/30 border border-white/8 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setExpandedKineticsCharId(expandedKineticsCharId === char.id ? null : char.id)}
+                        className={`w-full flex items-center justify-between p-2.5 transition-colors text-left ${
+                          expandedKineticsCharId === char.id ? "bg-white/15 hover:bg-white/20" : "hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="font-mono text-[9px] uppercase font-bold tracking-wider text-slate-200">Kinetics</span>
+                        <span className="font-mono text-[9px] font-bold text-slate-400">
+                          {expandedKineticsCharId === char.id ? "[ Hide ]" : "[ Expand ]"}
+                        </span>
+                      </button>
+                      {expandedKineticsCharId === char.id && (
+                        <div className="p-3 border-t border-white/8 bg-black/50 grid grid-cols-3 gap-2">
+                          {[
+                            { label: "How They Carry Themselves", value: char.kinetics.posture },
+                            { label: "Nervous Habits", value: char.kinetics.gesture_vocabulary },
+                            { label: "How They React", value: char.kinetics.reaction_tempo },
+                          ].map(({ label, value }) => (
+                            <div key={label} className="bg-white/5 p-2 rounded-lg border border-white/8">
+                              <span className="text-slate-500 font-mono text-[8px] uppercase tracking-wider block mb-0.5">{label}</span>
+                              <span className="font-medium leading-tight text-[10px] text-slate-100">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Psychology — collapsible */}
+                    <div className="bg-black/30 border border-white/8 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setExpandedPsychCharId(expandedPsychCharId === char.id ? null : char.id)}
+                        className={`w-full flex items-center justify-between p-2.5 transition-colors text-left ${
+                          expandedPsychCharId === char.id ? "bg-white/15 hover:bg-white/20" : "hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="font-mono text-[9px] uppercase font-bold tracking-wider text-slate-200">Psychology</span>
+                        <span className="font-mono text-[9px] font-bold text-slate-400">
+                          {expandedPsychCharId === char.id ? "[ Hide ]" : "[ Expand ]"}
+                        </span>
+                      </button>
+                      {expandedPsychCharId === char.id && (
+                        <div className="p-3 border-t border-white/8 bg-black/50 grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-slate-500 block font-mono uppercase text-[8px] tracking-wider mb-0.5">Outer Personality</span>
+                            <p className="text-white font-semibold text-[10px] leading-snug">{char.psychology.social}</p>
+                            <p className="text-slate-400 text-[9px] mt-0.5 leading-snug">{char.psychology.core}</p>
+                          </div>
+                          <div>
+                            <span className="text-orange-400 block font-mono uppercase text-[8px] tracking-wider mb-0.5">What They're Hiding</span>
+                            <p className="text-orange-300 font-semibold text-[10px] leading-snug">{char.psychology.hidden}</p>
+                            <p className="text-slate-400 text-[9px] mt-0.5 leading-snug">{char.psychology.personal}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Style Lock — collapsible */}
