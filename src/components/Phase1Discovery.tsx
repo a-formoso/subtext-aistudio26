@@ -243,10 +243,6 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                         <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Main Conflict</span>
                         <span className="text-slate-200 text-[11px]">{setting.dimensions.conflict_level}</span>
                       </div>
-                      <div className="col-span-2 border-t border-white/8 pt-2.5">
-                        <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Story Constraint</span>
-                        <span className="text-slate-300 italic text-[11px]">{setting.creative_limitation}</span>
-                      </div>
                     </div>
                   </motion.div>
                 ) : (
