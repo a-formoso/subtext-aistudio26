@@ -197,6 +197,44 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
         </div>
       )}
 
+      {/* ── Bio-Responsive Telemetry card — mirrors Phase 1 Story Setup ── */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <div>
+            <span className="font-mono text-[9px] tracking-widest text-slate-400 uppercase font-bold">Bio-Responsive Telemetry</span>
+            <h2 className="text-base font-semibold text-white mt-0.5">The Smart Biosphere</h2>
+          </div>
+          <span className={`font-mono text-[10px] font-bold px-2.5 py-1 rounded border shrink-0 ${
+            stress >= 85 ? "text-red-400 bg-red-950/30 border-red-900/50"
+            : stress >= 50 ? "text-amber-400 bg-amber-950/30 border-amber-900/50"
+            : stress >= 25 ? "text-violet-400 bg-violet-950/30 border-violet-900/50"
+            : "text-slate-400 bg-white/5 border-white/15"
+          }`}>
+            {stress >= 85 ? "CRISIS — CRIMSON"
+              : stress >= 50 ? "TENSION — AMBER"
+              : stress >= 25 ? "APPREHENSION — VIOLET"
+              : "STABLE — LAVENDER"}
+          </span>
+        </div>
+
+        <div className="space-y-2 border-l-2 border-orange-500/40 pl-3">
+          <div className="flex items-center justify-between text-[10px] font-mono">
+            <span className="text-slate-500 uppercase tracking-widest">Stress Index</span>
+            <span className="text-slate-200 font-bold">{stress}%</span>
+          </div>
+          <div className="flex items-center justify-between text-[10px] font-mono">
+            <span className="text-slate-500 uppercase tracking-widest">Subtext Metric</span>
+            <span className="text-slate-300">{currentBeat?.status || "Calm — Resting"}</span>
+          </div>
+          <div className="text-[10px] font-mono pt-0.5">
+            <span className="text-slate-500 uppercase tracking-widest block mb-0.5">Greenhouse Flora Shift</span>
+            <p className="text-slate-400 italic font-sans leading-relaxed text-[11px]">
+              {currentBeat?.visual_flora || "Orchids luminous pale lavender, roots holding a calm soil water-balance."}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* ══ MAIN CARD — mirrors Phase 1 option card exactly ══════════════ */}
       <div className="rounded-2xl border border-orange-500/70 p-4 bg-gradient-to-br from-[#0c0c10] to-[#08080a] shadow-2xl">
 
