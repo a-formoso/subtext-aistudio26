@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { StoryOption, Blueprint, BeatSheet, SubtextualBeat, Sequence } from "../types";
 import { PRESEEDED_BLUEPRINT } from "../preseededData";
 import { GreenhouseVisualizer } from "./GreenhouseVisualizer";
 import {
-  Sparkles, ArrowRight, ChevronLeft, ChevronRight,
+  Sparkles, ArrowRight, ChevronLeft, ChevronRight, ChevronDown,
   Volume2, Film, Palette, Music, CheckCircle
 } from "lucide-react";
 import { StoryboardPanel } from "./StoryboardPanel";
@@ -45,6 +45,13 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
   const [activeSceneNum, setActiveSceneNum] = useState<number | null>(null);
   const [activeBeatIdx, setActiveBeatIdx] = useState(0);
 
+  // Fold states
+  const [scenesExpanded, setScenesExpanded] = useState(false);
+  const [beatsExpanded,  setBeatsExpanded]  = useState(false);
+
+  // Auto-select Act I / Seq 1 on first load
+  const hasAutoSelected = useRef(false);
+
   const handleGenerateBlueprint = async () => {
     if (!chosenOption) return;
     setIsLoading(true); setErrorInfo(null);
@@ -78,6 +85,24 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
         setting: chosenOption.setting, meaning: chosenOption.meaning, characters: chosenOption.characters });
     }
   }, [chosenOption]);
+
+  // Auto-select Act I / Seq 1 the first time the component renders with sequences
+  useEffect(() => {
+    if (hasAutoSelected.current) return;
+    const seqs = getBlueprintSequences(blueprint);
+    const firstSeq = seqs.act_one_sequences?.[0];
+    if (firstSeq) {
+      const firstScene = firstSeq.scenes?.[0];
+      setActiveActIdx(0);
+      setActiveSeqId(firstSeq.sequence_id);
+      setActiveSceneNum(firstScene?.scene_number ?? null);
+      setActiveBeatIdx(0);
+      setScenesExpanded(false);
+      setBeatsExpanded(false);
+      setRightView("scenes");
+      hasAutoSelected.current = true;
+    }
+  }, [blueprint]);
 
   const convertedSequences = getBlueprintSequences(blueprint);
   const convertedBeats     = getBlueprintBeats(blueprint);
@@ -151,11 +176,16 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
     const firstScene = allSequences.find(s => s.sequence_id === id)?.scenes?.[0];
     setActiveSceneNum(firstScene?.scene_number ?? null);
     setActiveBeatIdx(0);
+    setScenesExpanded(false);
+    setBeatsExpanded(false);
     setRightView("scenes");
   };
 
   const selectScene = (num: number) => {
-    setActiveSceneNum(num); setActiveBeatIdx(0); setRightView("beats");
+    setActiveSceneNum(num);
+    setActiveBeatIdx(0);
+    setBeatsExpanded(false);
+    setRightView("beats");
   };
 
   const goBack = () => {
@@ -419,22 +449,45 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
                   exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}
                   className="space-y-3"
                 >
-                  {/* Scene tabs — mirrors character name tabs */}
+                  {/* Scene tabs — foldable when > 1 scene */}
                   {activeSeq?.scenes && activeSeq.scenes.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                      {activeSeq.scenes.map(sc => (
+                    <div className="space-y-1.5">
+                      {activeSeq.scenes.length > 1 && (
                         <button
-                          key={sc.scene_number}
-                          onClick={() => setActiveSceneNum(sc.scene_number)}
-                          className={`px-2.5 py-1 rounded font-mono text-[10px] font-bold transition-all cursor-pointer border shrink-0 ${
-                            activeSceneNum === sc.scene_number
-                              ? "bg-white/15 border-white/25 text-white"
-                              : "bg-black/50 border-white/15 text-slate-300 hover:text-white hover:border-white/30"
-                          }`}
+                          onClick={() => setScenesExpanded(e => !e)}
+                          className="flex items-center gap-1.5 w-full text-left px-0 py-0.5 text-[9px] font-mono text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
                         >
-                          Scene {sc.scene_number}
+                          <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${scenesExpanded ? "" : "-rotate-90"}`} />
+                          {scenesExpanded ? "Collapse" : `Show all ${activeSeq.scenes.length} scenes`}
                         </button>
-                      ))}
+                      )}
+                      <AnimatePresence>
+                        {(activeSeq.scenes.length === 1 || scenesExpanded) && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                              {activeSeq.scenes.map(sc => (
+                                <button
+                                  key={sc.scene_number}
+                                  onClick={() => setActiveSceneNum(sc.scene_number)}
+                                  className={`px-2.5 py-1 rounded font-mono text-[10px] font-bold transition-all cursor-pointer border shrink-0 ${
+                                    activeSceneNum === sc.scene_number
+                                      ? "bg-white/15 border-white/25 text-white"
+                                      : "bg-black/50 border-white/15 text-slate-300 hover:text-white hover:border-white/30"
+                                  }`}
+                                >
+                                  Scene {sc.scene_number}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   )}
 
@@ -509,41 +562,52 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
                     {beats.length === 0 ? (
                       <p className="text-[11px] text-slate-600 italic font-mono py-4 text-center">Generate with Gemini AI.</p>
                     ) : (
-                      beats.map((beat, bi) => {
-                        const isActive = activeBeatIdx === bi;
-                        const shotId   = activeSeq
-                          ? makeShotId(activeSeq.sequence_id, activeSeq.globalIdx, activeScene!.scene_number, beat.beat_number)
-                          : `B${beat.beat_number}`;
-                        return (
+                      <>
+                        {(beatsExpanded ? beats : beats.slice(0, 2)).map((beat, bi) => {
+                          const isActive = activeBeatIdx === bi;
+                          const shotId   = activeSeq
+                            ? makeShotId(activeSeq.sequence_id, activeSeq.globalIdx, activeScene!.scene_number, beat.beat_number)
+                            : `B${beat.beat_number}`;
+                          return (
+                            <button
+                              key={beat.beat_number}
+                              onClick={() => setActiveBeatIdx(bi)}
+                              className={`w-full text-left rounded-lg p-3 border transition-all cursor-pointer ${
+                                isActive ? "border-orange-500/50 bg-orange-950/15" : "border-white/8 bg-black/30 hover:bg-white/5"
+                              }`}
+                            >
+                              <div className="flex justify-between items-center mb-1.5">
+                                <span className={`font-mono text-[9px] font-bold ${isActive ? "text-orange-400" : "text-slate-500"}`}>
+                                  BEAT {beat.beat_number}
+                                </span>
+                                <span className="font-mono text-[8px] text-slate-600 bg-black/60 border border-white/8 px-1.5 py-0.5 rounded">
+                                  {shotId}
+                                </span>
+                              </div>
+                              <p className="text-[11px] font-sans text-slate-200 leading-relaxed mb-1.5">"{beat.text}"</p>
+                              <div className="space-y-0.5 border-t border-white/5 pt-1.5">
+                                <div className="flex items-start gap-1.5 text-[9px] font-mono">
+                                  <span className="text-orange-400 shrink-0 font-bold uppercase">{characters[0]?.identity?.name?.split(" ")[0] ?? "C1"}:</span>
+                                  <span className="text-slate-400 uppercase tracking-wide leading-tight">{beat.action.split(":")[1]?.trim() || beat.action}</span>
+                                </div>
+                                <div className="flex items-start gap-1.5 text-[9px] font-mono">
+                                  <span className="text-emerald-400 shrink-0 font-bold uppercase">{characters[1]?.identity?.name?.split(" ")[0] ?? "C2"}:</span>
+                                  <span className="text-slate-400 uppercase tracking-wide leading-tight">{beat.reaction.split(":")[1]?.trim() || beat.reaction}</span>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                        {beats.length > 2 && (
                           <button
-                            key={beat.beat_number}
-                            onClick={() => setActiveBeatIdx(bi)}
-                            className={`w-full text-left rounded-lg p-3 border transition-all cursor-pointer ${
-                              isActive ? "border-orange-500/50 bg-orange-950/15" : "border-white/8 bg-black/30 hover:bg-white/5"
-                            }`}
+                            onClick={() => setBeatsExpanded(e => !e)}
+                            className="flex items-center gap-1.5 w-full justify-center py-1.5 text-[9px] font-mono text-slate-500 hover:text-slate-300 transition-colors cursor-pointer rounded-lg border border-white/6 bg-black/20 hover:bg-white/5"
                           >
-                            <div className="flex justify-between items-center mb-1.5">
-                              <span className={`font-mono text-[9px] font-bold ${isActive ? "text-orange-400" : "text-slate-500"}`}>
-                                BEAT {beat.beat_number}
-                              </span>
-                              <span className="font-mono text-[8px] text-slate-600 bg-black/60 border border-white/8 px-1.5 py-0.5 rounded">
-                                {shotId}
-                              </span>
-                            </div>
-                            <p className="text-[11px] font-sans text-slate-200 leading-relaxed mb-1.5">"{beat.text}"</p>
-                            <div className="space-y-0.5 border-t border-white/5 pt-1.5">
-                              <div className="flex items-start gap-1.5 text-[9px] font-mono">
-                                <span className="text-orange-400 shrink-0 font-bold uppercase">{characters[0]?.identity?.name?.split(" ")[0] ?? "C1"}:</span>
-                                <span className="text-slate-400 uppercase tracking-wide leading-tight">{beat.action.split(":")[1]?.trim() || beat.action}</span>
-                              </div>
-                              <div className="flex items-start gap-1.5 text-[9px] font-mono">
-                                <span className="text-emerald-400 shrink-0 font-bold uppercase">{characters[1]?.identity?.name?.split(" ")[0] ?? "C2"}:</span>
-                                <span className="text-slate-400 uppercase tracking-wide leading-tight">{beat.reaction.split(":")[1]?.trim() || beat.reaction}</span>
-                              </div>
-                            </div>
+                            <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${beatsExpanded ? "rotate-180" : ""}`} />
+                            {beatsExpanded ? "Collapse beats" : `Show ${beats.length - 2} more beat${beats.length - 2 > 1 ? "s" : ""}`}
                           </button>
-                        );
-                      })
+                        )}
+                      </>
                     )}
                   </div>
 
