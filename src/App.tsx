@@ -4,7 +4,7 @@ import { PRESEEDED_OPTIONS, PRESEEDED_BLUEPRINT, PRESEEDED_SCRIPT } from "./pres
 import { Phase1Discovery } from "./components/Phase1Discovery";
 import { Phase2Blueprint } from "./components/Phase2Blueprint";
 import { Phase3Script } from "./components/Phase3Script";
-import { Phase4Visuals } from "./components/Phase4Visuals";
+import { Phase4Visuals, type CharacterVariant } from "./components/Phase4Visuals";
 import { Phase5Shots } from "./components/Phase5Shots";
 import { Phase6Assembly } from "./components/Phase6Assembly";
 import { motion, AnimatePresence } from "motion/react";
@@ -28,6 +28,7 @@ export default function App() {
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint>(PRESEEDED_BLUEPRINT);
   const [scriptText, setScriptText] = useState<string>(PRESEEDED_SCRIPT);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [characterVariants, setCharacterVariants] = useState<CharacterVariant[]>([]);
 
   const getDisplayCharacters = (option: StoryOption) => {
     if (!option) return [];
@@ -267,12 +268,15 @@ export default function App() {
                     <Phase4Visuals
                       selectedOption={selectedOption}
                       onProceed={() => setActivePhase(5)}
+                      characterVariants={characterVariants}
+                      onAddVariant={(v) => setCharacterVariants(prev => [...prev, v])}
                     />
                   )}
                   {activePhase === 5 && (
                     <Phase5Shots
                       blueprint={selectedBlueprint}
                       onProceed={() => setActivePhase(6)}
+                      characterVariants={characterVariants}
                     />
                   )}
                   {activePhase === 6 && (

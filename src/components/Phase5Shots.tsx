@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Blueprint } from "../types";
 import { getBlueprintSequences, getBlueprintBeats, getStoryCharacters } from "../utils/schemaConverter";
-import { Sparkles, Film, ArrowRight, Play, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
+import { Sparkles, Film, ArrowRight, Play, AlertCircle, RefreshCw, ChevronRight, RotateCcw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import type { CharacterVariant } from "./Phase4Visuals";
 
 interface Phase5ShotsProps {
   blueprint: Blueprint;
   onProceed: () => void;
+  characterVariants?: CharacterVariant[];
 }
 
 interface ShotJob {
@@ -15,20 +17,31 @@ interface ShotJob {
   imageUrl?: string;
   videoUrl?: string;
   prompt?: string;
+  jobId?: string;
+  selectedVariant?: string;
 }
 
-function buildSeedancePrompt(shot: {
-  framing: string; setting: string; action: string; reaction: string;
-  flora: string; charName: string; vocal: string;
-}) {
+type FlatShot = {
+  shotId: string; seqId: string; seqTitle: string; sceneNum: number;
+  beatNum: number; text: string; action: string; reaction: string;
+  flora: string; vocal: string; framing: string; setting: string;
+  charName: string; charId: string; settingAbbrev: string;
+};
+
+function buildSeedancePrompt(shot: FlatShot, variantLabel?: string) {
+  const stateNote = variantLabel ? `\n[CHARACTER STATE] ${variantLabel}` : "";
   return `[SHOT SETUP] ${shot.framing}, anamorphic 35mm, cinematic key light
 [OPENING FRAME] ${shot.charName} — ${shot.setting}
 [MOTION] ${shot.action}
 [CLOSING FRAME] ${shot.reaction}
-[ATMOSPHERE] ${shot.flora} | Vocal state: ${shot.vocal}`.trim();
+[ATMOSPHERE] ${shot.flora} | Vocal state: ${shot.vocal}${stateNote}`.trim();
 }
 
-export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
+function abbreviateSetting(s: string): string {
+  return s.split(",")[0].split("—")[0].trim().slice(0, 22);
+}
+
+export function Phase5Shots({ blueprint, onProceed, characterVariants = [] }: Phase5ShotsProps) {
   const sequences = getBlueprintSequences(blueprint);
   const beats = getBlueprintBeats(blueprint);
   const characters = getStoryCharacters(blueprint as any);
@@ -38,12 +51,6 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
     ...(sequences.act_two_sequences || []),
     ...(sequences.act_three_sequences || []),
   ];
-
-  type FlatShot = {
-    shotId: string; seqId: string; seqTitle: string; sceneNum: number;
-    beatNum: number; text: string; action: string; reaction: string;
-    flora: string; vocal: string; framing: string; setting: string; charName: string;
-  };
 
   const flatShots: FlatShot[] = [];
   allSeqs.forEach((seq, si) => {
@@ -56,6 +63,7 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
         const speaker = characters.find(c =>
           beat.action?.toLowerCase().includes(c.identity?.name?.toLowerCase().split(" ")[0] ?? "")
         ) ?? characters[0];
+        const settingRaw = scene.setting_micro || seq.setting_macro || "";
         flatShots.push({
           shotId,
           seqId: seq.sequence_id,
@@ -67,9 +75,11 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
           reaction: beat.reaction,
           flora: beat.visual_flora,
           vocal: beat.vocal_state || "neutral_state",
-          framing: speaker?.cinematics?.framing || "Medium Close-Up",
-          setting: scene.setting_micro || seq.setting_macro,
+          framing: speaker?.cinematics?.framing || "MCU",
+          setting: settingRaw,
+          settingAbbrev: abbreviateSetting(settingRaw),
           charName: speaker?.identity?.name || "Character",
+          charId: speaker?.id || "",
         });
       });
     });
@@ -78,16 +88,63 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
   const [activeShotId, setActiveShotId] = useState<string>(flatShots[0]?.shotId || "");
   const [jobs, setJobs] = useState<Record<string, ShotJob>>({});
   const [editedPrompts, setEditedPrompts] = useState<Record<string, string>>({});
+  const pollingRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   const activeShot = flatShots.find(s => s.shotId === activeShotId) || flatShots[0];
   const activeJob = activeShotId ? jobs[activeShotId] : undefined;
 
-  const getPrompt = (shot: FlatShot) =>
-    editedPrompts[shot.shotId] ?? buildSeedancePrompt(shot);
+  const getPrompt = (shot: FlatShot) => {
+    if (editedPrompts[shot.shotId]) return editedPrompts[shot.shotId];
+    const selectedVariant = jobs[shot.shotId]?.selectedVariant;
+    const variantLabel = selectedVariant
+      ? characterVariants.find(v => v.variantId === selectedVariant)?.label
+      : undefined;
+    return buildSeedancePrompt(shot, variantLabel);
+  };
+
+  const startPolling = (shotId: string, jobId: string) => {
+    if (pollingRefs.current[shotId]) clearInterval(pollingRefs.current[shotId]);
+    pollingRefs.current[shotId] = setInterval(async () => {
+      try {
+        const resp = await fetch(`/api/job-status/${jobId}`);
+        const data = await resp.json();
+        if (data.status === "completed") {
+          clearInterval(pollingRefs.current[shotId]);
+          delete pollingRefs.current[shotId];
+          setJobs(prev => {
+            const prev_ = prev[shotId];
+            const wasVideo = prev_?.status === "generating" && prev_?.videoUrl !== undefined;
+            return {
+              ...prev,
+              [shotId]: {
+                ...prev_!,
+                status: wasVideo ? "video_done" : "image_done",
+                imageUrl: data.result?.url || prev_?.imageUrl,
+                videoUrl: data.result?.video_url || prev_?.videoUrl,
+              }
+            };
+          });
+        } else if (data.status === "failed") {
+          clearInterval(pollingRefs.current[shotId]);
+          delete pollingRefs.current[shotId];
+          setJobs(prev => ({ ...prev, [shotId]: { ...prev[shotId]!, status: "error" } }));
+        }
+      } catch {
+        // keep polling until it succeeds or component unmounts
+      }
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      Object.values(pollingRefs.current).forEach(clearInterval);
+    };
+  }, []);
 
   const generateImage = async (shot: FlatShot) => {
     const prompt = getPrompt(shot);
-    setJobs(prev => ({ ...prev, [shot.shotId]: { shotId: shot.shotId, status: "generating", prompt } }));
+    const prev = jobs[shot.shotId];
+    setJobs(j => ({ ...j, [shot.shotId]: { ...(prev || {}), shotId: shot.shotId, status: "generating", prompt } }));
     try {
       const resp = await fetch("/api/generate-shot", {
         method: "POST",
@@ -96,19 +153,24 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
       });
       const data = await resp.json();
       if (data.success) {
-        setJobs(prev => ({ ...prev, [shot.shotId]: { shotId: shot.shotId, status: "image_done", imageUrl: data.imageUrl, prompt } }));
+        if (data.jobId) {
+          setJobs(j => ({ ...j, [shot.shotId]: { shotId: shot.shotId, status: "generating", jobId: data.jobId, prompt } }));
+          startPolling(shot.shotId, data.jobId);
+        } else {
+          setJobs(j => ({ ...j, [shot.shotId]: { shotId: shot.shotId, status: "image_done", imageUrl: data.imageUrl, prompt } }));
+        }
       } else {
-        setJobs(prev => ({ ...prev, [shot.shotId]: { shotId: shot.shotId, status: "error", prompt } }));
+        setJobs(j => ({ ...j, [shot.shotId]: { shotId: shot.shotId, status: "error", prompt } }));
       }
     } catch {
-      setJobs(prev => ({ ...prev, [shot.shotId]: { shotId: shot.shotId, status: "error", prompt } }));
+      setJobs(j => ({ ...j, [shot.shotId]: { shotId: shot.shotId, status: "error", prompt } }));
     }
   };
 
   const promoteToVideo = async (shot: FlatShot) => {
     const job = jobs[shot.shotId];
     if (!job) return;
-    setJobs(prev => ({ ...prev, [shot.shotId]: { ...job, status: "generating" } }));
+    setJobs(j => ({ ...j, [shot.shotId]: { ...job, status: "generating" } }));
     try {
       const resp = await fetch("/api/generate-shot", {
         method: "POST",
@@ -117,16 +179,37 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
       });
       const data = await resp.json();
       if (data.success) {
-        setJobs(prev => ({ ...prev, [shot.shotId]: { ...job, status: "video_done", videoUrl: data.videoUrl } }));
+        if (data.jobId) {
+          setJobs(j => ({ ...j, [shot.shotId]: { ...job, status: "generating", jobId: data.jobId, videoUrl: "" } }));
+          startPolling(shot.shotId, data.jobId);
+        } else {
+          setJobs(j => ({ ...j, [shot.shotId]: { ...job, status: "video_done", videoUrl: data.videoUrl } }));
+        }
       } else {
-        setJobs(prev => ({ ...prev, [shot.shotId]: { ...job, status: "error" } }));
+        setJobs(j => ({ ...j, [shot.shotId]: { ...job, status: "error" } }));
       }
     } catch {
-      setJobs(prev => ({ ...prev, [shot.shotId]: { ...prev[shot.shotId]!, status: "error" } }));
+      setJobs(j => ({ ...j, [shot.shotId]: { ...job, status: "error" } }));
     }
   };
 
+  const setVariant = (shotId: string, variantId: string | undefined) => {
+    setJobs(j => ({ ...j, [shotId]: { ...(j[shotId] || { shotId, status: "idle" }), selectedVariant: variantId } }));
+    setEditedPrompts(p => {
+      const newP = { ...p };
+      delete newP[shotId];
+      return newP;
+    });
+  };
+
   const doneCount = Object.values(jobs).filter(j => j.status === "video_done" || j.status === "image_done").length;
+  const canProceed = doneCount > 0;
+
+  const shotLabel = (shot: FlatShot) => {
+    const framingAbbrev = shot.framing.replace("Close-Up", "CU").replace("Medium Close-Up", "MCU").replace("Medium Shot", "MS").replace("Wide Shot", "WS").replace("Extreme Close-Up", "ECU").replace("Over the Shoulder", "OTS");
+    const charFirst = shot.charName.split(" ")[0];
+    return `${framingAbbrev} ${charFirst}, ${shot.settingAbbrev}`;
+  };
 
   if (flatShots.length === 0) {
     return (
@@ -142,6 +225,10 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
       </div>
     );
   }
+
+  const activeCharVariants = activeShot
+    ? characterVariants.filter(v => v.charId === activeShot.charId)
+    : [];
 
   return (
     <div className="space-y-5">
@@ -160,7 +247,13 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
           </div>
           <button
             onClick={onProceed}
-            className="flex items-center gap-2 py-2 px-5 rounded-lg font-mono text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white transition-all cursor-pointer shadow-md shadow-orange-950/40"
+            disabled={!canProceed}
+            title={!canProceed ? "Generate at least one shot to proceed" : undefined}
+            className={`flex items-center gap-2 py-2 px-5 rounded-lg font-mono text-xs font-bold transition-all shadow-md ${
+              canProceed
+                ? "bg-orange-600 hover:bg-orange-500 text-white cursor-pointer shadow-orange-950/40"
+                : "bg-white/5 text-slate-600 cursor-not-allowed border border-white/10"
+            }`}
           >
             Proceed to Assembly
             <ArrowRight className="w-3.5 h-3.5" />
@@ -168,7 +261,8 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-white/8">
-          <div className="lg:col-span-4 overflow-y-auto max-h-[500px] p-3 space-y-1">
+          {/* Shot list */}
+          <div className="lg:col-span-4 overflow-y-auto max-h-[540px] p-3 space-y-1">
             <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest block mb-2 px-1">Shot List</span>
             {flatShots.map(shot => {
               const job = jobs[shot.shotId];
@@ -183,9 +277,14 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className={`font-mono text-[8px] font-bold ${isActive ? "text-orange-400" : "text-slate-600"}`}>{shot.shotId}</span>
-                    <StatusDot status={job?.status} />
+                    <ShotStatusBadge status={job?.status} />
                   </div>
-                  <p className="text-[10px] text-slate-300 leading-snug line-clamp-2">"{shot.text}"</p>
+                  <p className={`font-mono text-[10px] font-semibold leading-snug ${isActive ? "text-white" : "text-slate-300"}`}>
+                    {shotLabel(shot)}
+                  </p>
+                  <p className="text-[9px] text-slate-600 mt-0.5 leading-snug line-clamp-1 italic">
+                    "{shot.text}"
+                  </p>
                   <div className="flex items-center gap-1.5 mt-1.5">
                     <span className="font-mono text-[8px] text-slate-600 bg-black/50 border border-white/8 px-1 py-0.5 rounded">{shot.framing}</span>
                     <ChevronRight className={`w-3 h-3 ml-auto ${isActive ? "text-orange-400" : "text-slate-700"}`} />
@@ -195,6 +294,7 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
             })}
           </div>
 
+          {/* Detail panel */}
           <div className="lg:col-span-8 p-4 space-y-4">
             {activeShot && (
               <AnimatePresence mode="wait">
@@ -204,11 +304,12 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
                   exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
                   className="space-y-4"
                 >
+                  {/* Shot header */}
                   <div className="flex items-start justify-between gap-2 pb-3 border-b border-white/8">
                     <div>
                       <span className="text-[9px] font-mono text-orange-400 font-bold block mb-0.5">{activeShot.shotId}</span>
-                      <h4 className="font-bold text-white text-sm">{activeShot.seqTitle}</h4>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{activeShot.setting}</p>
+                      <h4 className="font-bold text-white text-sm">{shotLabel(activeShot)}</h4>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{activeShot.seqTitle} · {activeShot.setting}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {activeJob?.status === "image_done" && (
@@ -220,20 +321,63 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
                           Promote to Video
                         </button>
                       )}
-                      <button
-                        onClick={() => generateImage(activeShot)}
-                        disabled={activeJob?.status === "generating"}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-[10px] text-white font-mono font-bold transition-all cursor-pointer"
-                      >
-                        {activeJob?.status === "generating" ? (
-                          <><RefreshCw className="w-3 h-3 animate-spin" />Generating…</>
-                        ) : (
-                          <><Sparkles className="w-3 h-3" />Generate Image</>
-                        )}
-                      </button>
+                      {activeJob?.status === "error" ? (
+                        <button
+                          onClick={() => generateImage(activeShot)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-[10px] text-white font-mono font-bold transition-all cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Retry
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => generateImage(activeShot)}
+                          disabled={activeJob?.status === "generating"}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-[10px] text-white font-mono font-bold transition-all cursor-pointer"
+                        >
+                          {activeJob?.status === "generating" ? (
+                            <><RefreshCw className="w-3 h-3 animate-spin" />Generating…</>
+                          ) : (
+                            <><Sparkles className="w-3 h-3" />Generate Image</>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
 
+                  {/* Character version selector */}
+                  {activeCharVariants.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="font-mono text-[9px] text-slate-500 uppercase tracking-wider block">Character Version</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => setVariant(activeShot.shotId, undefined)}
+                          className={`px-2.5 py-1 rounded font-mono text-[9px] font-bold border transition-all cursor-pointer ${
+                            !activeJob?.selectedVariant
+                              ? "bg-white/15 border-white/25 text-white"
+                              : "bg-black/50 border-white/10 text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          BASE
+                        </button>
+                        {activeCharVariants.map(v => (
+                          <button
+                            key={v.variantId}
+                            onClick={() => setVariant(activeShot.shotId, v.variantId)}
+                            className={`px-2.5 py-1 rounded font-mono text-[9px] font-bold border transition-all cursor-pointer ${
+                              activeJob?.selectedVariant === v.variantId
+                                ? "bg-violet-900/40 border-violet-500/40 text-violet-200"
+                                : "bg-black/50 border-white/10 text-slate-400 hover:text-violet-200 hover:border-violet-700/40"
+                            }`}
+                          >
+                            {v.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Prompt editor */}
                   <div>
                     <span className="font-mono text-[9px] text-slate-500 uppercase tracking-wider block mb-1.5">Seedance 2.0 Prompt</span>
                     <textarea
@@ -243,28 +387,39 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
                     />
                   </div>
 
+                  {/* Render canvas */}
                   <div className={`aspect-video rounded-xl border flex items-center justify-center transition-all ${
                     activeJob?.status === "video_done" ? "border-blue-500/40 bg-blue-950/10"
                     : activeJob?.status === "image_done" ? "border-emerald-500/40 bg-emerald-950/10"
-                    : activeJob?.status === "generating" ? "border-orange-500/30 bg-orange-950/10 animate-pulse"
+                    : activeJob?.status === "generating" ? "border-orange-500/30 bg-orange-950/10"
+                    : activeJob?.status === "error" ? "border-red-800/30 bg-red-950/10"
                     : "border-white/8 bg-black/30"
                   }`}>
-                    {activeJob?.status === "video_done" ? (
+                    {activeJob?.status === "video_done" && (
                       <div className="flex flex-col items-center gap-2">
                         <Play className="w-8 h-8 text-blue-400" />
                         <span className="text-[10px] font-mono text-blue-300">Video clip ready</span>
                       </div>
-                    ) : activeJob?.status === "image_done" ? (
+                    )}
+                    {activeJob?.status === "image_done" && (
                       <div className="flex flex-col items-center gap-2">
                         <Film className="w-8 h-8 text-emerald-400" />
                         <span className="text-[10px] font-mono text-emerald-300">Storyboard image ready</span>
                       </div>
-                    ) : activeJob?.status === "generating" ? (
+                    )}
+                    {activeJob?.status === "generating" && (
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-6 h-6 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
-                        <span className="text-[10px] font-mono text-orange-400">Rendering shot…</span>
+                        <span className="text-[10px] font-mono text-orange-400">Polling Higgsfield — checking every 3s…</span>
                       </div>
-                    ) : (
+                    )}
+                    {activeJob?.status === "error" && (
+                      <div className="flex flex-col items-center gap-2">
+                        <AlertCircle className="w-8 h-8 text-red-500/70" />
+                        <span className="text-[10px] font-mono text-red-400">Render failed — press Retry to resubmit</span>
+                      </div>
+                    )}
+                    {(!activeJob || activeJob.status === "idle") && (
                       <div className="flex flex-col items-center gap-2">
                         <Film className="w-8 h-8 text-slate-700" />
                         <span className="text-[10px] font-mono text-slate-600">Press Generate Image to render this shot</span>
@@ -272,21 +427,15 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
                     )}
                   </div>
 
-                  {activeJob?.status === "error" && (
-                    <div className="flex items-center gap-2 p-2.5 rounded-lg border border-yellow-700/40 bg-yellow-950/20 text-yellow-400 text-[10px] font-mono">
-                      <AlertCircle className="w-3 h-3 shrink-0" />
-                      Generation failed. Add HIGGSFIELD_API_KEY and HIGGSFIELD_SECRET to Replit Secrets.
-                    </div>
-                  )}
-
+                  {/* Beat context */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-1.5">
                       <span className="font-mono text-[9px] text-slate-500 uppercase tracking-wider block">Subtext Action</span>
                       <p className="text-[10px] text-slate-300 leading-snug uppercase tracking-wide">{activeShot.action.split(":")[1]?.trim() || activeShot.action}</p>
                     </div>
                     <div className="bg-black/40 border border-white/8 rounded-lg p-3 space-y-1.5">
-                      <span className="font-mono text-[9px] text-slate-500 uppercase tracking-wider block">Flora / Environment</span>
-                      <p className="text-[10px] text-slate-300 leading-snug italic">{activeShot.flora}</p>
+                      <span className="font-mono text-[9px] text-slate-500 uppercase tracking-wider block">Dialogue Context</span>
+                      <p className="text-[10px] text-slate-400 leading-snug italic line-clamp-3">"{activeShot.text}"</p>
                     </div>
                   </div>
                 </motion.div>
@@ -299,11 +448,31 @@ export function Phase5Shots({ blueprint, onProceed }: Phase5ShotsProps) {
   );
 }
 
-function StatusDot({ status }: { status?: string }) {
-  if (!status || status === "idle") return <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />;
-  if (status === "generating") return <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping" />;
-  if (status === "image_done") return <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />;
-  if (status === "video_done") return <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />;
-  if (status === "error") return <div className="w-1.5 h-1.5 rounded-full bg-red-500" />;
+function ShotStatusBadge({ status }: { status?: string }) {
+  if (!status || status === "idle") return (
+    <div className="flex items-center gap-1">
+      <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+    </div>
+  );
+  if (status === "generating") return (
+    <div className="flex items-center gap-1">
+      <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping" />
+    </div>
+  );
+  if (status === "image_done") return (
+    <div className="flex items-center gap-1">
+      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+    </div>
+  );
+  if (status === "video_done") return (
+    <div className="flex items-center gap-1">
+      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+    </div>
+  );
+  if (status === "error") return (
+    <div className="flex items-center gap-1">
+      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+    </div>
+  );
   return null;
 }

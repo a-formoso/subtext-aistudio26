@@ -393,11 +393,17 @@ app.post("/api/generate-visual", async (req, res) => {
       },
       body: JSON.stringify({ prompt, model: "soul", num_images: 10, aspect_ratio: "16:9" }),
     });
+    const ct = response.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      const raw = await response.text();
+      console.error("Higgsfield visual: unexpected non-JSON response", raw.slice(0, 200));
+      return res.json({ success: false, message: `Higgsfield returned HTTP ${response.status}` });
+    }
     const data = await response.json() as any;
     if (data.job_id || data.images) {
       res.json({ success: true, jobId: data.job_id, imageUrl: data.images?.[0]?.url });
     } else {
-      res.json({ success: false, message: data.error || "Higgsfield returned no data." });
+      res.json({ success: false, message: data.error || data.message || "Higgsfield returned no data." });
     }
   } catch (error: any) {
     console.error("Higgsfield visual generation failed:", error.message);
@@ -430,6 +436,12 @@ app.post("/api/generate-shot", async (req, res) => {
         },
         body: JSON.stringify({ prompt, model: "soul", num_images: 1, aspect_ratio: "16:9" }),
       });
+      const ct = response.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        const raw = await response.text();
+        console.error("Higgsfield shot/image: non-JSON", raw.slice(0, 200));
+        return res.json({ success: false, message: `Higgsfield returned HTTP ${response.status}` });
+      }
       const data = await response.json() as any;
       res.json({ success: true, jobId: data.job_id, imageUrl: data.images?.[0]?.url });
     } else {
@@ -443,6 +455,12 @@ app.post("/api/generate-shot", async (req, res) => {
         },
         body: JSON.stringify({ prompt, model: "seedance-2.0", image_url: imageUrl, duration: 5 }),
       });
+      const ct = response.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        const raw = await response.text();
+        console.error("Higgsfield shot/video: non-JSON", raw.slice(0, 200));
+        return res.json({ success: false, message: `Higgsfield returned HTTP ${response.status}` });
+      }
       const data = await response.json() as any;
       res.json({ success: true, jobId: data.job_id, videoUrl: data.video_url });
     }
@@ -466,6 +484,12 @@ app.get("/api/job-status/:jobId", async (req, res) => {
     const response = await fetch(`https://api.higgsfield.ai/v1/jobs/${jobId}`, {
       headers: { "Authorization": `Bearer ${apiKey}`, "X-Secret": secret },
     });
+    const ct = response.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      const raw = await response.text();
+      console.error("Higgsfield job-status: non-JSON", raw.slice(0, 200));
+      return res.json({ success: false, message: `Higgsfield returned HTTP ${response.status}` });
+    }
     const data = await response.json() as any;
     res.json({ success: true, status: data.status, result: data.result });
   } catch (error: any) {

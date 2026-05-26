@@ -206,9 +206,6 @@ export function Phase6Assembly({ blueprint, onBack }: Phase6AssemblyProps) {
                 <div className="flex items-center gap-2 mb-1">
                   <Music className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="font-mono text-[9px] text-slate-300 uppercase font-bold tracking-wider">ElevenLabs Audio</span>
-                  {!characters.length && (
-                    <span className="ml-auto font-mono text-[8px] text-yellow-500">Add ELEVENLABS_API_KEY to enable</span>
-                  )}
                 </div>
                 {characters.length > 0 ? (
                   <>
