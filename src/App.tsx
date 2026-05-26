@@ -12,6 +12,7 @@ import { UpgradeWall } from "./components/UpgradeWall";
 import { ProductionsMenu } from "./components/ProductionsMenu";
 import { AuthModal } from "./components/AuthModal";
 import { useAuth } from "./context/AuthContext";
+import { supabase } from "./lib/supabase";
 import { saveProduction, type Production } from "./lib/productions";
 import { usageLabel, isLimitReached } from "./lib/accessTier";
 import { motion, AnimatePresence } from "motion/react";
@@ -35,7 +36,7 @@ const PHASE_TO_STATUS: Record<Phase, Production["status"]> = {
 };
 
 export default function App() {
-  const { user, loading, accessTier, usage, signOut, session } = useAuth();
+  const { user, loading, accessTier, usage, signOut, refreshAccess } = useAuth();
 
   // View routing
   const [view, setView] = useState<AppView>("landing");
@@ -195,9 +196,20 @@ export default function App() {
     scheduleSave(3, { blueprint_data: blueprint });
   };
 
-  const handleProceedToVisuals = () => {
+  const handleProceedToVisuals = async () => {
     setActivePhase(4);
     scheduleSave(4, { screenplay_text: scriptText });
+
+    // Mark trial as used once the user completes Phase 3 (screenplay)
+    // This is the gate — after this point, they must subscribe to create another production.
+    if (user && accessTier.tier === "trial") {
+      await supabase
+        .from("user_profiles")
+        .update({ studio_trial_used: true })
+        .eq("id", user.id);
+      // Refresh access so next session shows upgrade wall instead of trial
+      refreshAccess();
+    }
   };
 
   const handleProceedToShots = () => {

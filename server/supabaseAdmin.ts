@@ -28,12 +28,22 @@ export interface AccessTier {
   video_promotions_limit: number | null;
 }
 
-const TIERS: Record<TierName, AccessTier> = {
-  none: { tier: "none", studio_productions_limit: 0, character_grids_limit: 0, shot_generations_limit: 0, video_promotions_limit: 0 },
-  trial: { tier: "trial", studio_productions_limit: 1, character_grids_limit: 10, shot_generations_limit: 20, video_promotions_limit: 5 },
-  standard: { tier: "standard", studio_productions_limit: 2, character_grids_limit: 10, shot_generations_limit: 20, video_promotions_limit: 5 },
-  pro: { tier: "pro", studio_productions_limit: null, character_grids_limit: null, shot_generations_limit: 150, video_promotions_limit: 50 },
+export const TIERS: Record<TierName, AccessTier> = {
+  none:     { tier: "none",     studio_productions_limit: 0,    character_grids_limit: 0,    shot_generations_limit: 0,   video_promotions_limit: 0  },
+  trial:    { tier: "trial",    studio_productions_limit: 1,    character_grids_limit: 10,   shot_generations_limit: 20,  video_promotions_limit: 5  },
+  standard: { tier: "standard", studio_productions_limit: 2,    character_grids_limit: 10,   shot_generations_limit: 20,  video_promotions_limit: 5  },
+  pro:      { tier: "pro",      studio_productions_limit: null, character_grids_limit: null, shot_generations_limit: 150, video_promotions_limit: 50 },
 };
+
+/**
+ * Derive TierName from active_subscription_tier value stored in the `users` table.
+ */
+function tierFromSubscriptionValue(val: string | null | undefined): TierName | null {
+  if (!val) return null;
+  const v = val.toLowerCase().replace(/[_\s-]/g, "");
+  if (v.includes("innercircle") || v.includes("inner")) return "pro";
+  return "standard";
+}
 
 /**
  * Verify a Supabase JWT and return the user id.
@@ -47,40 +57,64 @@ export async function verifyToken(authHeader: string | undefined): Promise<strin
 }
 
 /**
- * Resolve access tier for a user.
+ * Resolve access tier for a user using the real database schema.
+ *
+ * Priority:
+ *  1. users.active_subscription_tier (primary — set by membership platform)
+ *  2. app_subscriptions (active rows)
+ *  3. user_profiles.studio_trial_used (trial gate — must be explicitly false)
+ *  4. none → Upgrade Wall
  */
 export async function resolveAccessTier(userId: string): Promise<AccessTier> {
-  const { data: subs } = await supabaseAdmin
-    .from("subscriptions")
-    .select("*, subscription_plans(name)")
+  // Step 1: check users.active_subscription_tier
+  const { data: userRow } = await supabaseAdmin
+    .from("users")
+    .select("active_subscription_tier")
+    .eq("supabase_id", userId)
+    .maybeSingle();
+
+  if (userRow?.active_subscription_tier) {
+    const t = tierFromSubscriptionValue(userRow.active_subscription_tier);
+    if (t) return TIERS[t];
+  }
+
+  // Step 2: check app_subscriptions
+  const { data: appSub } = await supabaseAdmin
+    .from("app_subscriptions")
+    .select("plan_name, status, amount")
     .eq("user_id", userId)
     .eq("status", "active")
     .limit(1)
     .maybeSingle();
 
-  if (subs) {
-    const planName: string = (subs.subscription_plans as any)?.name ?? "";
-    if (planName.toLowerCase().includes("inner circle") || (subs.amount && subs.amount >= 297)) {
-      return TIERS.pro;
-    }
+  if (appSub) {
+    const t = tierFromSubscriptionValue(appSub.plan_name);
+    if (t) return TIERS[t];
+    if (appSub.amount && Number(appSub.amount) >= 297) return TIERS.pro;
     return TIERS.standard;
   }
 
-  // Check trial
+  // Step 3: check trial — only if profile row exists with studio_trial_used = false
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
     .select("studio_trial_used")
     .eq("id", userId)
     .maybeSingle();
 
-  if (!profile?.studio_trial_used) return TIERS.trial;
+  if (profile !== null && profile !== undefined && profile.studio_trial_used === false) {
+    return TIERS.trial;
+  }
+
+  // Step 4: no access
   return TIERS.none;
 }
 
 export type UsageField = "character_grids_used" | "shot_generations_used" | "video_promotions_used";
 
 /**
- * Check limit and increment usage counter. Returns false if limit reached.
+ * Ensure studio_usage row exists for the current month, read the counter,
+ * compare against tier limit, and if allowed increment by 1.
+ * Returns { allowed, used, limit }.
  */
 export async function checkAndIncrementUsage(
   userId: string,
@@ -91,12 +125,15 @@ export async function checkAndIncrementUsage(
   const limitKey = field.replace("_used", "_limit") as keyof AccessTier;
   const limit = tier[limitKey] as number | null;
 
-  // Upsert usage row
-  await supabaseAdmin.from("studio_usage").upsert(
-    { user_id: userId, month, [field]: 0 },
-    { onConflict: "user_id,month", ignoreDuplicates: true }
-  );
+  // Ensure row exists (ignore if already there)
+  await supabaseAdmin
+    .from("studio_usage")
+    .upsert(
+      { user_id: userId, month, [field]: 0 },
+      { onConflict: "user_id,month", ignoreDuplicates: true }
+    );
 
+  // Read current value
   const { data } = await supabaseAdmin
     .from("studio_usage")
     .select(field)
@@ -110,6 +147,7 @@ export async function checkAndIncrementUsage(
     return { allowed: false, used: current, limit };
   }
 
+  // Increment
   await supabaseAdmin
     .from("studio_usage")
     .update({ [field]: current + 1 })

@@ -32,6 +32,18 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
 });
 
+/**
+ * Derive TierName from active_subscription_tier string stored in the `users` table.
+ * Matches case-insensitively against plan name patterns.
+ */
+function tierFromSubscriptionValue(val: string | null | undefined): TierName | null {
+  if (!val) return null;
+  const v = val.toLowerCase().replace(/[_\s-]/g, "");
+  if (v.includes("innercircle") || v.includes("inner")) return "pro";
+  // Any other active tier → standard (Studio Lot, quarterly, annual, etc.)
+  return "standard";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -43,40 +55,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resolveAccess = useCallback(async (uid: string) => {
     try {
-      // Check subscriptions table — join to subscription_plans for name
-      const { data: subs } = await supabase
-        .from("subscriptions")
-        .select("*, subscription_plans(name)")
-        .eq("user_id", uid)
-        .eq("status", "active")
-        .limit(1)
+      let tier: TierName = "none";
+
+      // ── Step 1: Check the `users` table (supabase_id = auth uid) ──
+      // This is the source of truth for subscription status in the existing project.
+      const { data: userRow, error: userErr } = await supabase
+        .from("users")
+        .select("active_subscription_tier")
+        .eq("supabase_id", uid)
         .maybeSingle();
 
-      let tier: TierName = "none";
-      if (subs) {
-        const planName: string = (subs.subscription_plans as any)?.name ?? "";
-        if (planName.toLowerCase().includes("inner circle") || (subs.amount && subs.amount >= 297)) {
-          tier = "pro";
-        } else {
-          tier = "standard";
+      if (!userErr && userRow) {
+        const derivedTier = tierFromSubscriptionValue(userRow.active_subscription_tier);
+        if (derivedTier) tier = derivedTier;
+      }
+
+      // ── Step 2: If still no subscription, also check app_subscriptions ──
+      if (tier === "none") {
+        const { data: appSub } = await supabase
+          .from("app_subscriptions")
+          .select("plan_name, status, amount")
+          .eq("user_id", uid)
+          .eq("status", "active")
+          .limit(1)
+          .maybeSingle();
+
+        if (appSub) {
+          const derivedTier = tierFromSubscriptionValue(appSub.plan_name);
+          if (derivedTier) {
+            tier = derivedTier;
+          } else if (appSub.amount && Number(appSub.amount) >= 297) {
+            tier = "pro";
+          } else {
+            tier = "standard";
+          }
         }
       }
 
-      // Check trial if no subscription
+      // ── Step 3: If still no subscription, check trial eligibility ──
       if (tier === "none") {
-        const { data: profile } = await supabase
+        // user_profiles.studio_trial_used must be explicitly false to grant trial.
+        // If the table/row doesn't exist yet, default is: NO trial (user must subscribe).
+        const { data: profile, error: profileErr } = await supabase
           .from("user_profiles")
           .select("studio_trial_used")
           .eq("id", uid)
           .maybeSingle();
-        const used = profile?.studio_trial_used ?? false;
-        setTrialUsed(used);
-        if (!used) tier = "trial";
+
+        if (!profileErr && profile !== null && profile.studio_trial_used === false) {
+          tier = "trial";
+          setTrialUsed(false);
+        } else {
+          // No profile row means this user has not been granted a trial.
+          // If profile exists with studio_trial_used = true, trial is exhausted.
+          setTrialUsed(true);
+          tier = "none";
+        }
       }
 
+      console.log(`[AuthContext] uid=${uid} → tier=${tier}`);
       setAccessTier(TIERS[tier]);
 
-      // Load current month usage
+      // ── Step 4: Load current month usage ──
       const month = new Date().toISOString().slice(0, 7);
       const { data: usageRow } = await supabase
         .from("studio_usage")
@@ -92,12 +132,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         video_promotions_used: usageRow?.video_promotions_used ?? 0,
       });
     } catch (e) {
-      console.error("resolveAccess:", e);
+      console.error("resolveAccess error:", e);
+      // On unexpected error, fail safe — deny access rather than grant it
+      setAccessTier(TIERS.none);
     }
   }, []);
 
   const refreshAccess = useCallback(async () => {
-    if (user) await resolveAccess(user.id);
+    if (user) {
+      resolvedRef.current = false;
+      await resolveAccess(user.id);
+    }
   }, [user, resolveAccess]);
 
   const signOut = useCallback(async () => {
@@ -132,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resolvedRef.current = false;
         setAccessTier(TIERS.none);
         setUsage(defaultUsage);
+        setTrialUsed(false);
       }
     });
     return () => subscription.unsubscribe();
