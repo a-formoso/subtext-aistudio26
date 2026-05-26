@@ -168,7 +168,24 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
 
   // ── Helpers ───────────────────────────────────────────────────────
   const selectAct = (idx: number) => {
-    setActiveActIdx(idx); resetNav();
+    setActiveActIdx(idx);
+    const actArrays = [
+      getBlueprintSequences(blueprint).act_one_sequences   || [],
+      getBlueprintSequences(blueprint).act_two_sequences   || [],
+      getBlueprintSequences(blueprint).act_three_sequences || [],
+    ];
+    const firstSeq = actArrays[idx]?.[0];
+    if (firstSeq) {
+      const firstScene = firstSeq.scenes?.[0];
+      setActiveSeqId(firstSeq.sequence_id);
+      setActiveSceneNum(firstScene?.scene_number ?? null);
+      setActiveBeatIdx(0);
+      setScenesExpanded(false);
+      setBeatsExpanded(false);
+      setRightView("scenes");
+    } else {
+      resetNav();
+    }
   };
 
   const selectSeq = (id: string) => {
