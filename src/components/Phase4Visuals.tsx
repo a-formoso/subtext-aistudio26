@@ -37,6 +37,16 @@ function withAspectRatio(prompt: string): string {
   return `${trimmed} --ar 16:9`;
 }
 
+function buildMasterGridPrompt(char: Character): string {
+  const v = char.visuals;
+  const id = char.identity;
+  const height = id?.height || "170cm";
+  const coreBody = v?.core_body || "";
+  const texture = v?.material_texture || "";
+  const outerMask = v?.wardrobe?.outer_mask || "";
+  return `A master character design reference sheet for ${coreBody}, ${texture}, wearing ${outerMask}. The character is ${height} tall. 10-panel 5x2 grid. Top Row: Full-body Front View (0 deg), Full-body 3/4 Front View (45 deg), Full-body Profile View (90 deg), Full-body 3/4 Back View (135 deg), Full-body Back View (180 deg). Solid light grey background next to a vertical measurement bar positioned on the LEFT displaying markings for height in clear increments. Bottom Row: Close-up Neutral Front View (0 deg), Neutral Profile, Joy/Laughter (natural), Anger/Rage, Sadness/Grief. Consistent studio lighting, photorealistic, ultra high detail, film production reference quality.`;
+}
+
 export function Phase4Visuals({ selectedOption, onProceed, characterVariants, onAddVariant }: Phase4VisualsProps) {
   const [activeTab, setActiveTab] = useState<AssetTab>("characters");
   const [activeCharIdx, setActiveCharIdx] = useState(0);
@@ -80,7 +90,7 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
     }, 3000);
   };
 
-  const generateAsset = async (assetId: string, rawPrompt: string) => {
+  const generateAsset = async (assetId: string, rawPrompt: string, negativePrompt?: string) => {
     const prompt = withAspectRatio(rawPrompt);
     setAssets(prev => ({ ...prev, [assetId]: { id: assetId, status: "generating", prompt } }));
     setApprovedIds(prev => { const next = new Set(prev); next.delete(assetId); return next; });
@@ -88,7 +98,7 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
       const resp = await fetch("/api/generate-visual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId, prompt }),
+        body: JSON.stringify({ assetId, prompt, ...(negativePrompt ? { negativePrompt } : {}) }),
       });
       const data = await resp.json();
       if (data.success) {
@@ -202,7 +212,7 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
                         variants={charVariantsFor(characters[activeCharIdx].id)}
                         variantAssets={assets}
                         variantApproved={approvedIds}
-                        onGenerate={(id, prompt) => generateAsset(id, prompt)}
+                        onGenerate={(id, prompt, negativePrompt) => generateAsset(id, prompt, negativePrompt)}
                         onApprove={approveAsset}
                         onAddVariant={(label, arcStep) => {
                           const char = characters[activeCharIdx];
@@ -278,7 +288,7 @@ function CharacterAssetCard({
   variants: CharacterVariant[];
   variantAssets: Record<string, GeneratedAsset>;
   variantApproved: Set<string>;
-  onGenerate: (id: string, prompt: string) => void;
+  onGenerate: (id: string, prompt: string, negativePrompt?: string) => void;
   onApprove: (id: string) => void;
   onAddVariant: (label: string, arcStep: string) => void;
 }) {
@@ -287,7 +297,8 @@ function CharacterAssetCard({
   const [variantArcStep, setVariantArcStep] = useState("");
 
   const basePrompt = char.prompts?.master_visual_reference?.master_grid_prompt
-    || `${char.visuals?.core_body || ""} ${char.visuals?.material_texture || ""}`.trim();
+    ?? buildMasterGridPrompt(char);
+  const negativePrompt = char.visuals?.negative_prompt || undefined;
 
   const confirmVariant = () => {
     if (!variantLabel.trim()) return;
@@ -305,6 +316,7 @@ function CharacterAssetCard({
         asset={baseAsset}
         approved={baseApproved}
         prompt={basePrompt}
+        negativePrompt={negativePrompt}
         onGenerate={onGenerate}
         onApprove={onApprove}
       />
@@ -321,6 +333,7 @@ function CharacterAssetCard({
               asset={variantAssets[v.variantId]}
               approved={variantApproved.has(v.variantId)}
               prompt={variantPrompt}
+              negativePrompt={negativePrompt}
               onGenerate={onGenerate}
               onApprove={onApprove}
               isVariant
@@ -386,11 +399,11 @@ function CharacterAssetCard({
 }
 
 function ReferenceGrid({
-  title, subtitle, description, assetId, asset, approved, prompt, onGenerate, onApprove, isVariant = false,
+  title, subtitle, description, assetId, asset, approved, prompt, negativePrompt, onGenerate, onApprove, isVariant = false,
 }: {
   title: string; subtitle?: string; description?: string;
-  assetId: string; asset?: GeneratedAsset; approved: boolean; prompt: string;
-  onGenerate: (id: string, prompt: string) => void;
+  assetId: string; asset?: GeneratedAsset; approved: boolean; prompt: string; negativePrompt?: string;
+  onGenerate: (id: string, prompt: string, negativePrompt?: string) => void;
   onApprove: (id: string) => void;
   isVariant?: boolean;
 }) {
@@ -411,7 +424,7 @@ function ReferenceGrid({
         </div>
 
         <button
-          onClick={() => onGenerate(assetId, prompt)}
+          onClick={() => onGenerate(assetId, prompt, negativePrompt)}
           disabled={status === "generating"}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] text-white font-mono font-bold transition-all cursor-pointer disabled:opacity-50 shrink-0 ${
             isVariant ? "bg-violet-700 hover:bg-violet-600" : "bg-orange-600 hover:bg-orange-500"

@@ -1,0 +1,19 @@
+Here is the prompt that should be used to generate the character sheet:
+"master_grid_prompt": "A master character design reference sheet for [core_body], [material_texture], wearing [outer_mask]. The character is [height] tall. 10-panel 5x2 grid. Top Row: Full-body Front View (0 deg), Full-body 3/4 Front View (45 deg), Full-body Profile View (90 deg), Full-body 3/4 Back View (135 deg), Full-body Back View (180 deg), Solid light grey background next to a vertical measurement bar positioned on the LEFT displaying markings for Class A/B/C metrics in clear black text. Bottom Row: Close-up Headshots showing Neutral Front View (0 deg), Neutral Profile, Joy/Laughter, Anger/Rage, Sadness/Grief. Soft even studio lighting, high-fidelity reference style. "
+The Character Array (see attached image):
+The master_grid_prompt should live inside the characters array at the character level and be populated by pulling directly from that character's own fields. Here's the clean version of how the prompt assembly should work in your backend:
+function buildMasterGridPrompt(character: Character): string {
+const { visuals, identity } = character;
+return `A master character design reference sheet for ${visuals.core_body}, ${visuals.material_texture}, wearing ${visuals.wardrobe.outer_mask}. The character is ${identity.height} tall. 10-panel 5x2 grid. Top Row: Full-body Front View (0 deg), Full-body 3/4 Front View (45 deg), Full-body Profile View (90 deg), Full-body 3/4 Back View (135 deg), Full-body Back View (180 deg), Solid light grey background next to a vertical measurement bar positioned on the LEFT displaying markings for Class A/B/C metrics in clear black text. Bottom Row: Close-up Headshots showing Neutral Front View (0 deg), Neutral Profile, Joy/Laughter, Anger/Rage, Sadness/Grief. Soft even studio lighting, high-fidelity reference style.`;
+}
+Then in your /api/generate-visual endpoint, call it like:
+const prompt = character.prompts?.master_visual_reference?.master_grid_prompt
+?? buildMasterGridPrompt(character);
+This way: if the JSON already has a pre-built prompt (from Phase 1 Gemini output), use it directly. If not, build it on the fly from the character fields. No manual prompt editing needed.
+One Thing To Add to the Prompt
+Looking at the image, the one thing missing from the current output that would make this even more useful for Phase 5 is a negative prompt appendage. The character schema already has a negative_prompt field — it should be appended to every generation call:
+const negativePrompt = character.visuals.negative_prompt;
+// Pass as separate parameter to Higgsfield API:
+// negative_prompt: negativePrompt
+This prevents the plastic skin, low resolution, and 3D render artifacts from creeping in on regenerations or variant grids.
+In /api/generate-visual, when generating a character's 5×2 grid, pull the prompt directly from character.prompts.master_visual_reference.master_grid_prompt — this field is already fully assembled by the Gemini Phase 1 pipeline and contains all the right tokens. Do not reconstruct it. Pass character.visuals.negative_prompt as the negative_prompt parameter to the Higgsfield image API. Also confirm the --ar 16:9 aspect ratio flag is being appended to every character grid generation call, since the 10-panel layout requires the wide format to render correctly.

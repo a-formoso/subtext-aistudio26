@@ -371,7 +371,7 @@ Include the visual_flora color shifts (e.g., violet, pale yellow, mottled, defen
 
 // Phase 4: Generate visual asset via Higgsfield
 app.post("/api/generate-visual", async (req, res) => {
-  const { assetId, prompt } = req.body;
+  const { assetId, prompt, negativePrompt } = req.body;
   const apiKey = process.env.HIGGSFIELD_API_KEY;
   const secret = process.env.HIGGSFIELD_SECRET;
 
@@ -383,6 +383,14 @@ app.post("/api/generate-visual", async (req, res) => {
     });
   }
 
+  const higgsfieldBody: Record<string, any> = {
+    prompt,
+    model: "soul",
+    num_images: 1,
+    aspect_ratio: "16:9",
+  };
+  if (negativePrompt) higgsfieldBody.negative_prompt = negativePrompt;
+
   try {
     const response = await fetch("https://api.higgsfield.ai/v1/images/generate", {
       method: "POST",
@@ -391,7 +399,7 @@ app.post("/api/generate-visual", async (req, res) => {
         "Authorization": `Bearer ${apiKey}`,
         "X-Secret": secret,
       },
-      body: JSON.stringify({ prompt, model: "soul", num_images: 10, aspect_ratio: "16:9" }),
+      body: JSON.stringify(higgsfieldBody),
     });
     const ct = response.headers.get("content-type") || "";
     if (!ct.includes("application/json")) {
