@@ -54,8 +54,14 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
       });
       const data = await resp.json();
       if (data.success && data.options && Array.isArray(data.options)) {
-        setOptions(data.options);
+        const newOptions = data.options;
+        setOptions(newOptions);
         setActiveCharIndex(0);
+        const first = newOptions[0];
+        if (first) {
+          setActiveOptionId(first.option_id);
+          onSelectOption(first);
+        }
       } else {
         setErrorInfo(data.message || "Failed to generate. Loaded pre-seeded high-fidelity targets.");
         setOptions(PRESEEDED_OPTIONS);

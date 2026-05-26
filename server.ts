@@ -199,7 +199,7 @@ Generate THREE distinct narrative directions for this setup. For each option, yo
 Reject all surface-level tropes and empty exposition. Output ONLY the raw JSON. Do not include markdown wraps or prefixing.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -303,7 +303,7 @@ Output a single, consolidated JSON block matching this exact structural schema:
 Generate detailed beat_progressions (minimum 3 beats per scene) for ALL scenes across Acts I, II, and III. Make sure every beat features active, capitalized gerund subtext tags and references vocal_state values. Ensure output is strictly Valid JSON.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -354,7 +354,7 @@ Write the final, production-ready screenplay based strictly on this data structu
 Include the visual_flora color shifts (e.g., violet, pale yellow, mottled, defensive crimson) in the action blocks to visually represent the characters' sweat and adrenaline changes. Begin the script immediately.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.0-flash",
       contents: prompt,
     });
 
