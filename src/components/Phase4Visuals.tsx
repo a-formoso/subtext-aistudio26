@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { StoryOption, Character } from "../types";
 import { getStoryCharacters, getStoryMeaning } from "../utils/schemaConverter";
 import {
-  Sparkles, RefreshCw, ArrowRight, ImageIcon, CheckCircle,
-  AlertCircle, User, MapPin, Package, Plus, Lock, X,
+  Sparkles, RefreshCw, ArrowRight, Film,
+  CheckCircle, AlertCircle, User, MapPin, Package, Plus, Lock, X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -31,15 +31,19 @@ interface GeneratedAsset {
   prompt?: string;
 }
 
-const ROW1_LABELS = ["Full-body Front (0°)", "3/4 Front (45°)", "Body Profile (90°)", "3/4 Back (135°)", "Full-body Back (180°)"];
-const ROW2_LABELS = ["Close-up Neutral", "Neutral Profile", "Joy / Laughter", "Anger / Rage", "Sadness / Grief"];
-const ALL_CELL_LABELS = [...ROW1_LABELS, ...ROW2_LABELS];
+function withAspectRatio(prompt: string): string {
+  const trimmed = prompt.trim();
+  if (trimmed.includes("--ar")) return trimmed;
+  return `${trimmed} --ar 16:9`;
+}
 
 export function Phase4Visuals({ selectedOption, onProceed, characterVariants, onAddVariant }: Phase4VisualsProps) {
   const [activeTab, setActiveTab] = useState<AssetTab>("characters");
   const [activeCharIdx, setActiveCharIdx] = useState(0);
   const [assets, setAssets] = useState<Record<string, GeneratedAsset>>({});
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
+  const pollingRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   const characters = getStoryCharacters(selectedOption);
   const meaning = getStoryMeaning(selectedOption);
@@ -50,8 +54,36 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
   ] : [];
   const props = meaning.props_sheet || [];
 
-  const generateAsset = async (assetId: string, prompt: string) => {
+  useEffect(() => {
+    return () => { Object.values(pollingRefs.current).forEach(clearInterval); };
+  }, []);
+
+  const startPolling = (assetId: string, jobId: string) => {
+    if (pollingRefs.current[assetId]) clearInterval(pollingRefs.current[assetId]);
+    pollingRefs.current[assetId] = setInterval(async () => {
+      try {
+        const resp = await fetch(`/api/job-status/${jobId}`);
+        const data = await resp.json();
+        if (data.status === "completed") {
+          clearInterval(pollingRefs.current[assetId]);
+          delete pollingRefs.current[assetId];
+          setAssets(prev => ({
+            ...prev,
+            [assetId]: { ...prev[assetId]!, status: "done", imageUrl: data.result?.url || data.result?.image_url },
+          }));
+        } else if (data.status === "failed") {
+          clearInterval(pollingRefs.current[assetId]);
+          delete pollingRefs.current[assetId];
+          setAssets(prev => ({ ...prev, [assetId]: { ...prev[assetId]!, status: "error" } }));
+        }
+      } catch { /* keep polling */ }
+    }, 3000);
+  };
+
+  const generateAsset = async (assetId: string, rawPrompt: string) => {
+    const prompt = withAspectRatio(rawPrompt);
     setAssets(prev => ({ ...prev, [assetId]: { id: assetId, status: "generating", prompt } }));
+    setApprovedIds(prev => { const next = new Set(prev); next.delete(assetId); return next; });
     try {
       const resp = await fetch("/api/generate-visual", {
         method: "POST",
@@ -61,7 +93,12 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
       const data = await resp.json();
       if (data.success) {
         setApiKeyMissing(false);
-        setAssets(prev => ({ ...prev, [assetId]: { id: assetId, status: "done", jobId: data.jobId, imageUrl: data.imageUrl, prompt } }));
+        if (data.jobId && !data.imageUrl) {
+          setAssets(prev => ({ ...prev, [assetId]: { id: assetId, status: "generating", jobId: data.jobId, prompt } }));
+          startPolling(assetId, data.jobId);
+        } else {
+          setAssets(prev => ({ ...prev, [assetId]: { id: assetId, status: "done", jobId: data.jobId, imageUrl: data.imageUrl, prompt } }));
+        }
       } else if (data.needsApiKey) {
         setApiKeyMissing(true);
         setAssets(prev => ({ ...prev, [assetId]: { id: assetId, status: "waiting_key", prompt } }));
@@ -73,7 +110,11 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
     }
   };
 
-  const approvedCount = Object.values(assets).filter(a => a.status === "done").length;
+  const approveAsset = (assetId: string) => {
+    setApprovedIds(prev => { const next = new Set(prev); next.add(assetId); return next; });
+  };
+
+  const approvedCount = approvedIds.size;
   const totalAssets = characters.length + locations.length + props.length;
 
   const tabs: { id: AssetTab; label: string; icon: typeof User; count: number }[] = [
@@ -144,7 +185,9 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
                           key={c.id}
                           onClick={() => setActiveCharIdx(i)}
                           className={`px-3 py-1.5 rounded-lg font-mono text-[10px] font-bold transition-all cursor-pointer border shrink-0 ${
-                            activeCharIdx === i ? "bg-white/15 border-white/25 text-white" : "bg-black/50 border-white/10 text-slate-400 hover:text-white hover:border-white/20"
+                            activeCharIdx === i
+                              ? "bg-white/15 border-white/25 text-white"
+                              : "bg-black/50 border-white/10 text-slate-400 hover:text-white hover:border-white/20"
                           }`}
                         >
                           {c.identity?.name || `Character ${i + 1}`}
@@ -155,9 +198,12 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
                       <CharacterAssetCard
                         char={characters[activeCharIdx]}
                         baseAsset={assets[characters[activeCharIdx].id]}
+                        baseApproved={approvedIds.has(characters[activeCharIdx].id)}
                         variants={charVariantsFor(characters[activeCharIdx].id)}
                         variantAssets={assets}
+                        variantApproved={approvedIds}
                         onGenerate={(id, prompt) => generateAsset(id, prompt)}
+                        onApprove={approveAsset}
                         onAddVariant={(label, arcStep) => {
                           const char = characters[activeCharIdx];
                           const variantId = `${char.id}_v${charVariantsFor(char.id).length + 1}`;
@@ -182,7 +228,9 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
                         label={loc.name}
                         sublabel={loc.desc}
                         asset={assets[loc.id]}
+                        approved={approvedIds.has(loc.id)}
                         onGenerate={() => generateAsset(loc.id, `Cinematic establishing shot of ${loc.name}. ${loc.desc}. High-fidelity, photorealistic, anamorphic lens, moody lighting.`)}
+                        onApprove={() => approveAsset(loc.id)}
                       />
                     ))}
                   </div>
@@ -204,7 +252,9 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
                           label={prop.name}
                           sublabel={prop.description}
                           asset={assets[id]}
+                          approved={approvedIds.has(id)}
                           onGenerate={() => generateAsset(id, `Product shot of "${prop.name}". ${prop.description}. Studio lighting, sharp focus, cinematic texture, 4K detail.`)}
+                          onApprove={() => approveAsset(id)}
                         />
                       );
                     })}
@@ -220,13 +270,16 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
 }
 
 function CharacterAssetCard({
-  char, baseAsset, variants, variantAssets, onGenerate, onAddVariant,
+  char, baseAsset, baseApproved, variants, variantAssets, variantApproved, onGenerate, onApprove, onAddVariant,
 }: {
   char: Character;
   baseAsset?: GeneratedAsset;
+  baseApproved: boolean;
   variants: CharacterVariant[];
   variantAssets: Record<string, GeneratedAsset>;
+  variantApproved: Set<string>;
   onGenerate: (id: string, prompt: string) => void;
+  onApprove: (id: string) => void;
   onAddVariant: (label: string, arcStep: string) => void;
 }) {
   const [addingVariant, setAddingVariant] = useState(false);
@@ -234,7 +287,7 @@ function CharacterAssetCard({
   const [variantArcStep, setVariantArcStep] = useState("");
 
   const basePrompt = char.prompts?.master_visual_reference?.master_grid_prompt
-    || `${char.visuals?.core_body || ""} ${char.visuals?.material_texture || ""}`;
+    || `${char.visuals?.core_body || ""} ${char.visuals?.material_texture || ""}`.trim();
 
   const confirmVariant = () => {
     if (!variantLabel.trim()) return;
@@ -244,37 +297,38 @@ function CharacterAssetCard({
 
   return (
     <div className="rounded-xl bg-black/50 border border-white/10 p-4 space-y-5">
-      {/* Base grid */}
       <ReferenceGrid
         title={`${char.identity?.name || "Character"} — Base Reference`}
         subtitle={char.identity?.cast_orbit}
         description={char.prompts?.master_visual_reference?.core_keywords_used || char.visuals?.core_body}
         assetId={char.id}
         asset={baseAsset}
+        approved={baseApproved}
         prompt={basePrompt}
         onGenerate={onGenerate}
+        onApprove={onApprove}
       />
 
-      {/* Variant grids */}
       {variants.map(v => {
         const variantPrompt = `${basePrompt}. STATE VARIANT: ${v.label}. Arc change: ${v.arcStep}. Maintain same character identity with adjusted wardrobe/expression/physical state.`;
         return (
-          <div key={v.variantId} className="border-t border-white/8 pt-4">
+          <div key={v.variantId} className="border-t border-white/8 pt-5">
             <ReferenceGrid
               title={`Variant: ${v.label}`}
               subtitle={v.arcStep}
-              description={`Arc step: ${v.arcStep}`}
+              description={`Arc change: ${v.arcStep}`}
               assetId={v.variantId}
               asset={variantAssets[v.variantId]}
+              approved={variantApproved.has(v.variantId)}
               prompt={variantPrompt}
               onGenerate={onGenerate}
+              onApprove={onApprove}
               isVariant
             />
           </div>
         );
       })}
 
-      {/* Add variant UI */}
       <div className="border-t border-white/8 pt-3">
         {!addingVariant ? (
           <button
@@ -332,105 +386,144 @@ function CharacterAssetCard({
 }
 
 function ReferenceGrid({
-  title, subtitle, description, assetId, asset, prompt, onGenerate, isVariant = false,
+  title, subtitle, description, assetId, asset, approved, prompt, onGenerate, onApprove, isVariant = false,
 }: {
   title: string; subtitle?: string; description?: string;
-  assetId: string; asset?: GeneratedAsset; prompt: string;
-  onGenerate: (id: string, prompt: string) => void; isVariant?: boolean;
+  assetId: string; asset?: GeneratedAsset; approved: boolean; prompt: string;
+  onGenerate: (id: string, prompt: string) => void;
+  onApprove: (id: string) => void;
+  isVariant?: boolean;
 }) {
   const status = asset?.status ?? "idle";
 
-  const cellClass = (i: number) => {
-    const base = "rounded-md border flex flex-col items-center justify-center gap-1 pb-1 transition-all overflow-hidden";
-    if (status === "done") return `${base} border-emerald-500/30 bg-emerald-950/10`;
-    if (status === "generating") return `${base} border-orange-500/25 bg-orange-950/8 animate-pulse`;
-    if (status === "waiting_key") return `${base} border-blue-800/30 bg-blue-950/10`;
-    if (status === "error") return `${base} border-red-800/30 bg-red-950/10`;
-    return `${base} border-white/8 bg-white/2`;
-  };
-
-  const cellIcon = (status: string) => {
-    if (status === "done") return <CheckCircle className="w-2.5 h-2.5 text-emerald-500" />;
-    if (status === "generating") return <div className="w-2 h-2 rounded-full bg-orange-500/60 animate-ping" />;
-    if (status === "waiting_key") return <Lock className="w-2.5 h-2.5 text-blue-500/50" />;
-    if (status === "error") return <AlertCircle className="w-2.5 h-2.5 text-red-500/70" />;
-    return <ImageIcon className="w-2.5 h-2.5 text-slate-700" />;
-  };
-
-  const cellLabel = (i: number, status: string) => {
-    const colors: Record<string, string> = {
-      done: "text-emerald-600",
-      generating: "text-orange-600",
-      waiting_key: "text-blue-700",
-      error: "text-red-700",
-    };
-    const labelText = status === "generating" ? "Rendering…"
-      : status === "waiting_key" ? "Pending"
-      : status === "error" ? "Failed"
-      : status === "done" ? ALL_CELL_LABELS[i]
-      : "—";
-    return (
-      <span className={`font-mono text-[6.5px] leading-tight text-center px-0.5 ${colors[status] ?? "text-slate-700"}`}>
-        {labelText}
-      </span>
-    );
-  };
-
   return (
     <div className="space-y-3">
+      {/* Header row */}
       <div className="flex items-start justify-between gap-3">
-        <div>
-          {subtitle && <span className={`text-[9px] font-mono uppercase tracking-widest block mb-0.5 ${isVariant ? "text-violet-400" : "text-slate-400"}`}>{subtitle}</span>}
+        <div className="min-w-0">
+          {subtitle && (
+            <span className={`text-[9px] font-mono uppercase tracking-widest block mb-0.5 ${isVariant ? "text-violet-400" : "text-slate-400"}`}>
+              {subtitle}
+            </span>
+          )}
           <h4 className={`font-bold text-sm ${isVariant ? "text-violet-200" : "text-white"}`}>{title}</h4>
           {description && <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">{description}</p>}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {status === "error" && (
-            <span className="font-mono text-[9px] text-red-400 border border-red-800/40 bg-red-950/20 px-2 py-1 rounded">Generation failed</span>
+
+        <button
+          onClick={() => onGenerate(assetId, prompt)}
+          disabled={status === "generating"}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] text-white font-mono font-bold transition-all cursor-pointer disabled:opacity-50 shrink-0 ${
+            isVariant ? "bg-violet-700 hover:bg-violet-600" : "bg-orange-600 hover:bg-orange-500"
+          }`}
+        >
+          {status === "generating" ? (
+            <><RefreshCw className="w-3 h-3 animate-spin" />Generating…</>
+          ) : (status === "done" || status === "error") ? (
+            <><RefreshCw className="w-3 h-3" />Regenerate</>
+          ) : (
+            <><Sparkles className="w-3 h-3" />Generate 5×2 Grid</>
           )}
-          {status === "waiting_key" && (
-            <span className="font-mono text-[9px] text-blue-300 border border-blue-800/40 bg-blue-950/20 px-2 py-1 rounded flex items-center gap-1">
-              <Lock className="w-2.5 h-2.5" /> Waiting for API key
-            </span>
-          )}
-          <button
-            onClick={() => onGenerate(assetId, prompt)}
-            disabled={status === "generating"}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] text-white font-mono font-bold transition-all cursor-pointer disabled:opacity-50 ${
-              isVariant ? "bg-violet-700 hover:bg-violet-600" : "bg-orange-600 hover:bg-orange-500"
+        </button>
+      </div>
+
+      {/* Single wide image container */}
+      <div className={`w-full rounded-xl border overflow-hidden transition-all ${
+        status === "done" && approved ? "border-emerald-500/50"
+        : status === "done" ? "border-orange-500/30"
+        : status === "generating" ? "border-orange-500/20"
+        : status === "waiting_key" ? "border-blue-800/30"
+        : status === "error" ? "border-red-800/30"
+        : "border-white/8"
+      }`}>
+        {status === "done" && asset?.imageUrl ? (
+          <img
+            src={asset.imageUrl}
+            alt={`${title} reference sheet`}
+            className="w-full object-cover"
+            style={{ aspectRatio: "16/9" }}
+          />
+        ) : (
+          <div
+            className={`w-full flex flex-col items-center justify-center gap-3 transition-all ${
+              status === "generating" ? "bg-orange-950/10 animate-pulse"
+              : status === "waiting_key" ? "bg-blue-950/10"
+              : status === "error" ? "bg-red-950/10"
+              : "bg-black/40"
             }`}
+            style={{ aspectRatio: "16/9" }}
           >
-            {status === "generating" ? (
-              <><RefreshCw className="w-3 h-3 animate-spin" />Generating…</>
-            ) : status === "done" ? (
-              <><RefreshCw className="w-3 h-3" />Regenerate</>
-            ) : (
-              <><Sparkles className="w-3 h-3" />Generate 5×2 Grid</>
+            {status === "generating" && (
+              <>
+                <div className="w-7 h-7 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+                <div className="text-center space-y-0.5">
+                  <p className="text-[10px] font-mono text-orange-400">Rendering reference sheet…</p>
+                  <p className="text-[9px] font-mono text-slate-600">Polling Higgsfield every 3s</p>
+                </div>
+              </>
             )}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-5 gap-1.5">
-        {ALL_CELL_LABELS.map((_, i) => (
-          <div key={i} className={cellClass(i)}>
-            <div className="flex-1 w-full flex items-center justify-center py-2">
-              {cellIcon(status)}
-            </div>
-            {cellLabel(i, status)}
+            {status === "waiting_key" && (
+              <>
+                <Lock className="w-6 h-6 text-blue-500/40" />
+                <p className="text-[10px] font-mono text-blue-400">Waiting for API key activation</p>
+              </>
+            )}
+            {status === "error" && (
+              <>
+                <AlertCircle className="w-6 h-6 text-red-500/60" />
+                <p className="text-[10px] font-mono text-red-400">Generation failed — press Regenerate to retry</p>
+              </>
+            )}
+            {(status === "idle" || status === "done") && (
+              <>
+                <Film className="w-8 h-8 text-slate-700" />
+                <p className="text-[10px] font-mono text-slate-600">
+                  {status === "done" ? "Image received — no preview URL returned" : "Press Generate 5×2 Grid to render"}
+                </p>
+              </>
+            )}
           </div>
-        ))}
+        )}
       </div>
 
-      <div className="flex gap-2 text-[8px] font-mono text-slate-600">
-        <span className="flex-1">Row 1 — 5 full-body angles</span>
-        <span className="flex-1 text-right">Row 2 — 5 expression headshots</span>
+      {/* Row labels */}
+      <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 px-0.5">
+        <span>Row 1 — Full-body poses (5 angles)</span>
+        <span>Row 2 — Headshots (5 expressions)</span>
       </div>
+
+      {/* Approve / action row */}
+      {(status === "done") && (
+        <div className="flex items-center gap-2">
+          {approved ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/20 text-[10px] text-emerald-400 font-mono font-bold">
+              <CheckCircle className="w-3 h-3" />
+              Approved
+            </div>
+          ) : (
+            <button
+              onClick={() => onApprove(assetId)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-600/40 bg-emerald-950/10 hover:bg-emerald-950/25 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono font-bold transition-all cursor-pointer"
+            >
+              <CheckCircle className="w-3 h-3" />
+              Approve
+            </button>
+          )}
+          <span className="text-[9px] font-mono text-slate-600">
+            {approved ? "Added to production pipeline" : "Approve to add to production pipeline"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-function AssetCard({ label, sublabel, asset, onGenerate }: { label: string; sublabel: string; asset?: GeneratedAsset; onGenerate: () => void }) {
+function AssetCard({
+  label, sublabel, asset, approved, onGenerate, onApprove,
+}: {
+  label: string; sublabel: string; asset?: GeneratedAsset; approved: boolean;
+  onGenerate: () => void; onApprove: () => void;
+}) {
   const status = asset?.status ?? "idle";
   return (
     <div className="rounded-xl bg-black/50 border border-white/10 p-4 space-y-3">
@@ -445,23 +538,54 @@ function AssetCard({ label, sublabel, asset, onGenerate }: { label: string; subl
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-[10px] text-white font-mono font-bold transition-all cursor-pointer shrink-0"
         >
           {status === "generating" ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-          {status === "generating" ? "…" : status === "done" ? "Regen" : "Generate"}
+          {status === "generating" ? "…" : (status === "done" || status === "error") ? "Regen" : "Generate"}
         </button>
       </div>
 
-      <div className={`aspect-video rounded-lg border flex flex-col items-center justify-center gap-1.5 transition-all ${
-        status === "done" ? "border-emerald-500/40 bg-emerald-950/20"
-        : status === "generating" ? "border-orange-500/30 bg-orange-950/10 animate-pulse"
-        : status === "waiting_key" ? "border-blue-800/30 bg-blue-950/10"
-        : status === "error" ? "border-red-800/30 bg-red-950/10"
-        : "border-white/8 bg-white/3"
-      }`}>
-        {status === "done" && <><CheckCircle className="w-5 h-5 text-emerald-500" /><span className="text-[9px] font-mono text-emerald-400">Asset ready</span></>}
-        {status === "generating" && <><div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /><span className="text-[9px] font-mono text-orange-400">Rendering…</span></>}
-        {status === "waiting_key" && <><Lock className="w-4 h-4 text-blue-500/50" /><span className="text-[9px] font-mono text-blue-400">Waiting for API key</span></>}
-        {status === "error" && <><AlertCircle className="w-4 h-4 text-red-500/70" /><span className="text-[9px] font-mono text-red-400">Generation failed</span></>}
-        {status === "idle" && <ImageIcon className="w-6 h-6 text-slate-700" />}
+      <div
+        className={`w-full rounded-lg border flex flex-col items-center justify-center gap-2 transition-all overflow-hidden ${
+          status === "done" && asset?.imageUrl ? "border-white/10"
+          : status === "done" ? "border-emerald-500/40 bg-emerald-950/20"
+          : status === "generating" ? "border-orange-500/30 bg-orange-950/10 animate-pulse"
+          : status === "waiting_key" ? "border-blue-800/30 bg-blue-950/10"
+          : status === "error" ? "border-red-800/30 bg-red-950/10"
+          : "border-white/8 bg-white/3"
+        }`}
+        style={{ aspectRatio: "16/9" }}
+      >
+        {status === "done" && asset?.imageUrl ? (
+          <img src={asset.imageUrl} alt={label} className="w-full h-full object-cover" />
+        ) : status === "done" ? (
+          <><CheckCircle className="w-5 h-5 text-emerald-500" /><span className="text-[9px] font-mono text-emerald-400">Asset ready</span></>
+        ) : status === "generating" ? (
+          <><div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /><span className="text-[9px] font-mono text-orange-400">Rendering…</span></>
+        ) : status === "waiting_key" ? (
+          <><Lock className="w-4 h-4 text-blue-500/50" /><span className="text-[9px] font-mono text-blue-400">Waiting for API key</span></>
+        ) : status === "error" ? (
+          <><AlertCircle className="w-4 h-4 text-red-500/70" /><span className="text-[9px] font-mono text-red-400">Failed</span></>
+        ) : (
+          <Film className="w-6 h-6 text-slate-700" />
+        )}
       </div>
+
+      {status === "done" && (
+        <div className="flex items-center gap-2">
+          {approved ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-emerald-500/40 bg-emerald-950/20 text-[9px] text-emerald-400 font-mono font-bold">
+              <CheckCircle className="w-2.5 h-2.5" />
+              Approved
+            </div>
+          ) : (
+            <button
+              onClick={onApprove}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-emerald-600/40 bg-emerald-950/10 hover:bg-emerald-950/25 text-[9px] text-emerald-400 font-mono font-bold transition-all cursor-pointer"
+            >
+              <CheckCircle className="w-2.5 h-2.5" />
+              Approve
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -469,7 +593,7 @@ function AssetCard({ label, sublabel, asset, onGenerate }: { label: string; subl
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-xl border border-white/8 bg-white/3 p-10 flex flex-col items-center justify-center gap-2 text-center">
-      <ImageIcon className="w-6 h-6 text-slate-700" />
+      <Film className="w-6 h-6 text-slate-700" />
       <p className="text-slate-600 font-mono text-[10px] italic">{message}</p>
     </div>
   );
