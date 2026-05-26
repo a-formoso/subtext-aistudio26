@@ -223,6 +223,32 @@ export interface SequenceMap {
   act_three_sequences: Sequence[];
 }
 
+export interface ShotComposition {
+  framing: string;
+  lens_profile: string;
+  camera_movement: string;
+  focal_target: string;
+}
+
+export interface ShotPerformance {
+  primary_actor_id: string;
+  active_kinetic_token: string;
+  gaze_vector: string;
+}
+
+export interface ShotChroma {
+  key_lighting: string;
+  environmental_vfx: string;
+}
+
+export interface CinematicShot {
+  shot_id: string;
+  composition: ShotComposition;
+  performance_capture: ShotPerformance;
+  chroma_and_lighting: ShotChroma;
+  automated_image_prompt: string;
+}
+
 export interface SubtextualBeat {
   beat_number: number;
   action: string;
@@ -231,6 +257,7 @@ export interface SubtextualBeat {
   vocal_state?: string; // e.g. "neutral_state", "tension_state", "panic_state"
   status: string;
   visual_flora: string;
+  cinematic_storyboard?: CinematicShot[];
 }
 
 export interface MicroBlueprint {

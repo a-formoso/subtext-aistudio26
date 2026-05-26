@@ -290,7 +290,47 @@ export const PRESEEDED_BLUEPRINT: Blueprint = {
             "reaction": "Elena: ROTATING her bio-metric smart ring slowly (Signaling dynamic cognitive scanning).",
             "text": "The bio-receptive Cabernet is a marvel, Elena. It takes exactly three minutes in contact with oxygen to fully lock its structural notes.",
             "status": "Polite facade intact. Heartrate 72bpm.",
-            "visual_flora": "Suspended air orchids remain pale lavender, a cool, stable resting state."
+            "visual_flora": "Suspended air orchids remain pale lavender, a cool, stable resting state.",
+            "cinematic_storyboard": [
+              {
+                "shot_id": "A1_Q1_S1_B1_Sht1",
+                "composition": {
+                  "framing": "Macro Close-Up (MCU)",
+                  "lens_profile": "35mm anamorphic, shallow depth of field",
+                  "camera_movement": "Absolute static tripod, high-tension clinical lock",
+                  "focal_target": "The hands of Victor beneath the slate table edge"
+                },
+                "performance_capture": {
+                  "primary_actor_id": "char_1",
+                  "active_kinetic_token": "Bespoke platinum signet ring being slowly rotated by long, pale fingers, knuckles turning bone-white",
+                  "gaze_vector": "Off-camera tracking shot right, pointing down 15-degrees"
+                },
+                "chroma_and_lighting": {
+                  "key_lighting": "Chiaroscuro, high-contrast side-key casting hard shadow across the table slate",
+                  "environmental_vfx": "Bioluminescent orchids in the background beginning to pulse with an un-steady, warm orange condensation"
+                },
+                "automated_image_prompt": "A macro close-up cinematic film still of a man's pale hands under a sleek slate dining table. His fingers compulsively rotate a heavy platinum signet ring, knuckles bone-white with tension. 35mm anamorphic lens, shallow depth of field, high-contrast side-key chiaroscuro lighting. In the soft-focus dark background, hyper-responsive smart greenhouse orchids pulse with a mottled, defensive orange light. Photorealistic, cyber-noir style --ar 16:9"
+              },
+              {
+                "shot_id": "A1_Q1_S1_B1_Sht2",
+                "composition": {
+                  "framing": "Over-The-Shoulder (OTS)",
+                  "lens_profile": "50mm anamorphic preset",
+                  "camera_movement": "Slow micro-pan left, matching the 250ms reaction tempo",
+                  "focal_target": "The profile silhouette of Elena"
+                },
+                "performance_capture": {
+                  "primary_actor_id": "char_2",
+                  "active_kinetic_token": "Rigid posture spine, chin slightly elevated, eyes pinned completely un-blinking onto Victor",
+                  "gaze_vector": "Screen left, locked tracking target"
+                },
+                "chroma_and_lighting": {
+                  "key_lighting": "Cool edge-rim reflection illuminating her sharp jawline profile",
+                  "environmental_vfx": "The surrounding clean hermetic glass pane reflecting automated orange stress indicators"
+                },
+                "automated_image_prompt": "An over-the-shoulder medium profile cinematic film still framing a woman with an immaculate, rigid posture and chin slightly elevated. Her eyes are un-blinking, looking toward a man across a dark slate table. Soft cool rim-lighting traces her sharp jawline. The hermetic glass dome panels in the background reflect faint, warning orange atmospheric mist. Photorealistic premium cinematic styling --ar 16:9"
+              }
+            ]
           },
           {
             "beat_number": 2,

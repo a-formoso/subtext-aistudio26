@@ -6,6 +6,7 @@ import {
   Sparkles, ArrowRight, ChevronLeft, ChevronRight,
   Volume2, Film, Palette, Music, CheckCircle
 } from "lucide-react";
+import { StoryboardPanel } from "./StoryboardPanel";
 import { motion, AnimatePresence } from "motion/react";
 import {
   getBlueprintSequences, getBlueprintBeats, getBlueprintLogline,
@@ -475,8 +476,9 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
                 <motion.div key="beats"
                   initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}
-                  className="grid grid-cols-1 lg:grid-cols-2 gap-3"
+                  className="flex flex-col gap-3"
                 >
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {/* Beat list — left column */}
                   <div className="space-y-2">
                     <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest block">Beat Progression</span>
@@ -627,6 +629,16 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
                       activeStatus={currentBeat?.status || "Stable."}
                     />
                   </div>
+                </div>{/* end inner grid */}
+
+                {/* Storyboard Asset Map — full width below beat grid */}
+                {currentBeat && (
+                  <StoryboardPanel
+                    shots={currentBeat.cinematic_storyboard || []}
+                    beatText={currentBeat.text}
+                    beatShotId={currentShotId}
+                  />
+                )}
                 </motion.div>
               )}
             </AnimatePresence>
