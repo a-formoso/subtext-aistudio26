@@ -349,37 +349,6 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
                   </span>
                 </div>
 
-                {/* Premise */}
-                <div className="border-t border-white/8 pt-3">
-                  <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-1">Master Premise</span>
-                  <p className="text-slate-200 text-[11px] leading-relaxed italic">
-                    "{(blueprint as any).meaning?.premise
-                      || (blueprint as any).step_3_and_4_meaning_and_props?.premise
-                      || "A quiet act of betrayal inside a living system that sees everything."}"
-                  </p>
-                </div>
-
-                {/* Dialectical debate */}
-                <div className="border-t border-white/8 pt-3 space-y-2">
-                  <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-0.5">Dialectical Debate</span>
-                  <div className="flex items-start gap-2 text-[11px]">
-                    <span className="text-emerald-500 font-bold font-mono shrink-0">+</span>
-                    <span className="text-slate-200">{meaning?.dialectical_debate?.positive_idea || "Institutional duty"}</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-[11px]">
-                    <span className="text-red-500 font-bold font-mono shrink-0">—</span>
-                    <span className="text-slate-200">{meaning?.dialectical_debate?.negative_counter_idea || "Personal liberation"}</span>
-                  </div>
-                </div>
-
-                {/* Controlling idea */}
-                <div className="border-t border-white/8 pt-3">
-                  <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-1">Controlling Idea</span>
-                  <p className="text-slate-400 text-[10px] italic leading-relaxed">
-                    {meaning?.controlling_idea || "Sovereignty is reclaimed only when one surrenders the illusion of control."}
-                  </p>
-                </div>
-
                 {/* Sequences — embedded cards */}
                 <div className="border-t border-white/8 pt-3 space-y-2">
                   <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-1.5">Sequences</span>
