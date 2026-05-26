@@ -4,6 +4,7 @@ import { getStoryCharacters, getStoryMeaning } from "../utils/schemaConverter";
 import {
   Sparkles, RefreshCw, ArrowRight, Film,
   CheckCircle, AlertCircle, User, MapPin, Package, Plus, Lock, X,
+  ChevronDown, ChevronRight, Eye, RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -408,6 +409,16 @@ function ReferenceGrid({
   isVariant?: boolean;
 }) {
   const status = asset?.status ?? "idle";
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [promptOverride, setPromptOverride] = useState(prompt);
+  const [negOverride, setNegOverride] = useState(negativePrompt ?? "");
+  const promptDirty = promptOverride !== prompt;
+  const negDirty = negOverride !== (negativePrompt ?? "");
+
+  const handleReset = () => {
+    setPromptOverride(prompt);
+    setNegOverride(negativePrompt ?? "");
+  };
 
   return (
     <div className="space-y-3">
@@ -424,7 +435,7 @@ function ReferenceGrid({
         </div>
 
         <button
-          onClick={() => onGenerate(assetId, prompt, negativePrompt)}
+          onClick={() => onGenerate(assetId, promptOverride, negOverride || undefined)}
           disabled={status === "generating"}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] text-white font-mono font-bold transition-all cursor-pointer disabled:opacity-50 shrink-0 ${
             isVariant ? "bg-violet-700 hover:bg-violet-600" : "bg-orange-600 hover:bg-orange-500"
@@ -503,6 +514,123 @@ function ReferenceGrid({
       <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 px-0.5">
         <span>Row 1 — Full-body poses (5 angles)</span>
         <span>Row 2 — Headshots (5 expressions)</span>
+      </div>
+
+      {/* Prompt Inspector */}
+      <div className="rounded-lg border border-white/8 overflow-hidden">
+        <button
+          onClick={() => setInspectorOpen(v => !v)}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white/3 hover:bg-white/6 transition-colors cursor-pointer group"
+        >
+          <div className="flex items-center gap-2">
+            {inspectorOpen
+              ? <ChevronDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-colors" />
+              : <ChevronRight className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-colors" />
+            }
+            <Eye className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-colors" />
+            <span className="font-mono text-[9px] uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors font-bold">
+              Prompt Inspector
+            </span>
+            {(promptDirty || negDirty) && (
+              <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                overridden
+              </span>
+            )}
+          </div>
+          <span className="font-mono text-[9px] text-slate-600 group-hover:text-slate-400 transition-colors">
+            {inspectorOpen ? "hide" : "inspect & override"}
+          </span>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {inspectorOpen && (
+            <motion.div
+              key="inspector"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="px-3 py-3 space-y-3 border-t border-white/8 bg-black/30">
+                {/* Positive prompt */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold">
+                      Prompt — sent to Higgsfield
+                    </label>
+                    {promptDirty && (
+                      <button
+                        onClick={() => setPromptOverride(prompt)}
+                        className="flex items-center gap-1 text-[9px] font-mono text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-2.5 h-2.5" />
+                        restore
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={promptOverride}
+                    onChange={e => setPromptOverride(e.target.value)}
+                    rows={5}
+                    spellCheck={false}
+                    className={`w-full bg-black/60 rounded-lg px-3 py-2.5 text-[10px] font-mono leading-relaxed resize-y focus:outline-none focus:ring-1 transition-all ${
+                      promptDirty
+                        ? "border border-amber-500/40 text-amber-100 focus:ring-amber-500/50"
+                        : "border border-white/8 text-slate-300 focus:ring-orange-500/40"
+                    }`}
+                  />
+                </div>
+
+                {/* Negative prompt */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-mono text-[9px] uppercase tracking-widest text-slate-400 font-bold">
+                      Negative Prompt
+                    </label>
+                    {negDirty && (
+                      <button
+                        onClick={() => setNegOverride(negativePrompt ?? "")}
+                        className="flex items-center gap-1 text-[9px] font-mono text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-2.5 h-2.5" />
+                        restore
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={negOverride}
+                    onChange={e => setNegOverride(e.target.value)}
+                    rows={2}
+                    spellCheck={false}
+                    placeholder="No negative prompt defined — type here to add one"
+                    className={`w-full bg-black/60 rounded-lg px-3 py-2.5 text-[10px] font-mono leading-relaxed resize-y focus:outline-none focus:ring-1 transition-all placeholder:text-slate-700 ${
+                      negDirty
+                        ? "border border-amber-500/40 text-amber-100 focus:ring-amber-500/50"
+                        : "border border-white/8 text-slate-300 focus:ring-orange-500/40"
+                    }`}
+                  />
+                </div>
+
+                {/* Footer actions */}
+                <div className="flex items-center justify-between pt-0.5">
+                  <p className="text-[9px] font-mono text-slate-600">
+                    Edits apply only to the next generation — they don't affect the source data.
+                  </p>
+                  {(promptDirty || negDirty) && (
+                    <button
+                      onClick={handleReset}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-[9px] font-mono text-slate-400 hover:text-white transition-all cursor-pointer"
+                    >
+                      <RotateCcw className="w-2.5 h-2.5" />
+                      Reset all
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Approve / action row */}
