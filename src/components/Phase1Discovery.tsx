@@ -244,21 +244,6 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                         <span className="text-slate-300 italic text-[11px]">{setting.creative_limitation}</span>
                       </div>
                     </div>
-
-                    {meaning.props_sheet && meaning.props_sheet.length > 0 && (
-                      <div className="border-t border-white/8 pt-3 space-y-2">
-                        <span className="font-mono text-[9px] text-slate-400 tracking-widest uppercase font-bold block">Props</span>
-                        {meaning.props_sheet.map((prop, i) => (
-                          <div key={i} className="flex items-start gap-2.5 bg-black/40 border border-white/8 rounded-lg p-2.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0 mt-1" />
-                            <div>
-                              <span className="font-mono text-[9px] font-bold text-orange-300 block mb-0.5">{prop.name}</span>
-                              <p className="text-[10px] text-slate-400 leading-snug">{prop.description}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </motion.div>
                 ) : (
                   <motion.div
@@ -283,6 +268,21 @@ export function Phase1Discovery({ onSelectOption, onLockOption, selectedOptionId
                         <p className="text-slate-200">{meaning.dialectical_debate.negative_counter_idea}</p>
                       </div>
                     </div>
+
+                    {meaning.props_sheet && meaning.props_sheet.length > 0 && (
+                      <div className="border-t border-white/8 pt-3 space-y-2">
+                        <span className="font-mono text-[9px] text-slate-400 tracking-widest uppercase font-bold block">Props</span>
+                        {meaning.props_sheet.map((prop, i) => (
+                          <div key={i} className="flex items-start gap-2.5 bg-black/40 border border-white/8 rounded-lg p-2.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0 mt-1" />
+                            <div>
+                              <span className="font-mono text-[9px] font-bold text-orange-300 block mb-0.5">{prop.name}</span>
+                              <p className="text-[10px] text-slate-400 leading-snug">{prop.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
