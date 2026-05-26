@@ -295,27 +295,42 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
                   </p>
                 </div>
 
-                {/* Sequences count for this act */}
-                <div className="border-t border-white/8 pt-3">
+                {/* Sequences — embedded cards */}
+                <div className="border-t border-white/8 pt-3 space-y-2">
                   <span className="text-slate-500 block text-[9px] font-mono uppercase tracking-wider mb-1.5">Sequences</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {actSequences.length === 0
-                      ? <span className="text-[10px] text-slate-600 italic">Generate with Gemini AI.</span>
-                      : actSequences.map(s => (
-                          <button
-                            key={s.sequence_id}
-                            onClick={() => selectSeq(s.sequence_id)}
-                            className={`font-mono text-[9px] px-2 py-0.5 rounded border transition-all cursor-pointer ${
-                              activeSeqId === s.sequence_id
-                                ? `${colors.badge} font-bold`
-                                : "border-white/15 text-slate-400 hover:text-white hover:bg-white/5"
-                            }`}
-                          >
-                            {s.sequence_id}
-                          </button>
-                        ))
-                    }
-                  </div>
+                  {actSequences.length === 0
+                    ? <span className="text-[10px] text-slate-600 italic">Generate with Gemini AI.</span>
+                    : actSequences.map(s => (
+                        <button
+                          key={s.sequence_id}
+                          onClick={() => selectSeq(s.sequence_id)}
+                          className={`w-full text-left rounded-lg p-2.5 border transition-all cursor-pointer group ${
+                            activeSeqId === s.sequence_id
+                              ? "border-current/20 bg-white/5 " + colors.badge
+                              : "border-white/8 bg-black/30 hover:bg-white/5 hover:border-white/15 text-slate-400"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className={`font-mono text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 ${
+                              activeSeqId === s.sequence_id ? colors.badge : "border-white/15 text-slate-500"
+                            }`}>
+                              {s.sequence_id}
+                            </span>
+                            <span className="font-mono text-[8px] text-slate-500 truncate">{s.themeFocus}</span>
+                            <ChevronRight className="w-3 h-3 text-slate-600 group-hover:text-white transition-colors shrink-0 ml-auto" />
+                          </div>
+                          <p className="text-[10px] font-sans font-bold text-slate-200 leading-tight mb-0.5 group-hover:text-white transition-colors">{s.title}</p>
+                          <p className="text-[9px] text-slate-500 leading-tight line-clamp-2">{s.dramatic_arc}</p>
+                          <div className="flex gap-1 mt-1.5 flex-wrap">
+                            {s.scenes?.map(sc => (
+                              <span key={sc.scene_number} className="font-mono text-[7px] px-1 py-0.5 rounded bg-black/50 border border-white/8 text-slate-600">
+                                S{sc.scene_number}
+                              </span>
+                            ))}
+                          </div>
+                        </button>
+                      ))
+                  }
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -324,10 +339,10 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
           {/* RIGHT: Drill-down panel — mirrors Characters & Voice Settings */}
           <div className="lg:col-span-8 flex flex-col gap-3">
 
-            {/* Right panel header — mirrors "CHARACTERS & VOICE SETTINGS" row */}
+            {/* Right panel header */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
-                {rightView !== "sequences" && (
+                {(rightView === "scenes" || rightView === "beats") && (
                   <button
                     onClick={goBack}
                     className="flex items-center gap-1 text-[10px] font-mono text-slate-400 hover:text-white transition-colors cursor-pointer"
@@ -336,55 +351,26 @@ export function Phase2Blueprint({ chosenOption, onSelectBlueprint, selectedBluep
                   </button>
                 )}
                 <span className="font-mono text-[9px] text-slate-400 tracking-widest uppercase font-bold truncate">
-                  {rightView === "sequences" && `Sequences — ${ACT_LABELS[activeActIdx]}`}
+                  {rightView === "sequences" && `Select a Sequence`}
                   {rightView === "scenes"    && `Scenes — ${activeSeqId}`}
                   {rightView === "beats"     && `Beats — Scene ${activeScene?.scene_number}`}
                 </span>
               </div>
-              {/* Breadcrumb */}
               <span className="font-mono text-[8px] text-slate-600 truncate hidden sm:block">{breadcrumb}</span>
             </div>
 
-            {/* ── SEQUENCES VIEW ── */}
             <AnimatePresence mode="wait">
+              {/* ── SEQUENCES PLACEHOLDER (sequences now live in left panel) ── */}
               {rightView === "sequences" && (
                 <motion.div key="sequences"
-                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}
-                  className="space-y-3"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                  className="rounded-xl bg-white/3 border border-white/8 p-10 flex flex-col items-center justify-center gap-3 text-center"
                 >
-                  {actSequences.length === 0 ? (
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-8 text-center">
-                      <p className="text-slate-600 font-mono text-xs italic">No sequences yet. Expand with Gemini AI.</p>
-                    </div>
-                  ) : (
-                    actSequences.map(seq => (
-                      <button
-                        key={seq.sequence_id}
-                        onClick={() => selectSeq(seq.sequence_id)}
-                        className="w-full text-left rounded-xl bg-white/5 border border-white/10 p-4 hover:border-white/25 hover:bg-white/8 transition-all cursor-pointer group"
-                      >
-                        <div className="flex items-center justify-between gap-3 mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border ${colors.badge}`}>
-                              {seq.sequence_id}
-                            </span>
-                            <span className="font-mono text-[9px] text-slate-500">{seq.themeFocus}</span>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-white transition-colors" />
-                        </div>
-                        <h5 className="text-sm font-sans font-bold text-slate-100 group-hover:text-white mb-1">{seq.title}</h5>
-                        <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{seq.dramatic_arc}</p>
-                        <div className="flex gap-1.5 mt-2 flex-wrap">
-                          {seq.scenes?.map(sc => (
-                            <span key={sc.scene_number} className="font-mono text-[8px] px-1.5 py-0.5 rounded bg-black/50 border border-white/10 text-slate-500">
-                              S{sc.scene_number}
-                            </span>
-                          ))}
-                        </div>
-                      </button>
-                    ))
-                  )}
+                  <Film className="w-6 h-6 text-slate-700" />
+                  <p className="text-slate-600 font-mono text-[10px] italic">
+                    Select a sequence from the act panel to drill into scenes and beats.
+                  </p>
                 </motion.div>
               )}
 
