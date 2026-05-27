@@ -46,15 +46,47 @@ function getGeminiClient(): GoogleGenAI {
   return aiClient;
 }
 
-const PRIMARY_MODEL = "gemini-3.5-flash";
-const FALLBACK_MODEL = "gemini-2.0-flash";
+// Model chain: try each in order until one succeeds.
+// gemini-2.5-flash supports thinkingConfig; 2.0-flash and 1.5-flash do not.
+const MODEL_CHAIN = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+const PRIMARY_MODEL = MODEL_CHAIN[0]; // used for status display
 
 function isBillingOrQuotaError(e: any): boolean {
-  const msg = e?.message || "";
-  return msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("prepayment") || msg.includes("quota") || msg.includes("RATE_LIMIT");
+  const msg = (e?.message || "") + (e?.status || "");
+  return (
+    msg.includes("429") ||
+    msg.includes("RESOURCE_EXHAUSTED") ||
+    msg.includes("prepayment") ||
+    msg.includes("quota") ||
+    msg.includes("RATE_LIMIT") ||
+    msg.includes("rate_limit")
+  );
 }
 
-// Strip thinkingConfig — not supported on gemini-2.0-flash
+function isPermanentBillingError(e: any): boolean {
+  const msg = e?.message || "";
+  return msg.includes("prepayment") || msg.includes("prepay");
+}
+
+// Parse "retry in Xs" from Google's error payload
+function parseRetryDelayMs(e: any): number {
+  try {
+    const raw = e?.message || "";
+    const match = raw.match(/retry[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*s/i);
+    if (match) return Math.ceil(parseFloat(match[1])) * 1000;
+    const details = JSON.parse(raw)?.error?.details;
+    if (Array.isArray(details)) {
+      for (const d of details) {
+        if (d?.retryDelay) {
+          const s = parseFloat(d.retryDelay.replace("s", ""));
+          return Math.ceil(s) * 1000;
+        }
+      }
+    }
+  } catch {}
+  return 22000; // default 22s if unparseable
+}
+
 function stripThinking(params: any): any {
   const p = { ...params };
   if (p.config) {
@@ -66,46 +98,54 @@ function stripThinking(params: any): any {
 
 async function generateWithFallback(params: Parameters<GoogleGenAI["models"]["generateContent"]>[0]): Promise<ReturnType<GoogleGenAI["models"]["generateContent"]>> {
   const ai = getGeminiClient();
-  try {
-    return await ai.models.generateContent({ ...params, model: PRIMARY_MODEL });
-  } catch (e: any) {
-    if (isBillingOrQuotaError(e)) {
-      console.warn(`[Gemini] ${PRIMARY_MODEL} quota/billing error — falling back to ${FALLBACK_MODEL}`);
-      return await ai.models.generateContent({ ...stripThinking(params), model: FALLBACK_MODEL });
+  let lastError: any;
+
+  for (const model of MODEL_CHAIN) {
+    // Strip thinkingConfig for models that don't support it
+    const useParams = model === "gemini-2.5-flash" ? params : stripThinking(params);
+    try {
+      const result = await ai.models.generateContent({ ...useParams, model });
+      if (model !== PRIMARY_MODEL) {
+        console.log(`[Gemini] succeeded with fallback model: ${model}`);
+      }
+      return result;
+    } catch (e: any) {
+      lastError = e;
+      if (!isBillingOrQuotaError(e)) throw e; // non-quota error — surface immediately
+      if (isPermanentBillingError(e)) {
+        console.warn(`[Gemini] ${model} permanent billing error (prepay depleted) — trying next model`);
+        continue;
+      }
+      // Transient rate-limit: wait the suggested delay then retry ONCE before moving on
+      const delayMs = parseRetryDelayMs(e);
+      console.warn(`[Gemini] ${model} rate-limited — waiting ${delayMs}ms then trying next model`);
+      await new Promise((r) => setTimeout(r, Math.min(delayMs, 30000)));
+      continue;
     }
-    throw e;
   }
+
+  throw lastError;
 }
 
 // ── /api/status — lightweight health check for both AI services ──
 app.get("/api/status", async (req, res) => {
   const status = { gemini: false, geminiModel: "", higgsfield: false };
 
-  // Check Gemini
-  try {
+  // Check Gemini — walk the model chain until one responds
+  {
     const ai = getGeminiClient();
-    await ai.models.generateContent({
-      model: PRIMARY_MODEL,
-      contents: "Reply with the word OK only.",
-      config: { maxOutputTokens: 5 },
-    });
-    status.gemini = true;
-    status.geminiModel = PRIMARY_MODEL;
-  } catch (e: any) {
-    if (isBillingOrQuotaError(e)) {
-      // Try free-tier fallback
+    for (const model of MODEL_CHAIN) {
       try {
-        const ai = getGeminiClient();
         await ai.models.generateContent({
-          model: FALLBACK_MODEL,
+          model,
           contents: "Reply with the word OK only.",
           config: { maxOutputTokens: 5 },
         });
         status.gemini = true;
-        status.geminiModel = FALLBACK_MODEL;
+        status.geminiModel = model;
+        break;
       } catch (_) {
-        status.gemini = false;
-        status.geminiModel = "";
+        // try next
       }
     }
   }
@@ -148,36 +188,38 @@ app.post("/api/generate-phase1", async (req, res) => {
 
   try {
     const ai = getGeminiClient();
-    const prompt = `You are an elite, award-winning Hollywood screenwriter and script analyst. Your creative process is governed by the narrative architecture of Robert McKee (Story) and Stanislavskian behavioral subtext.
+    const prompt = `You are an elite, award-winning Hollywood screenwriter and script analyst. Your creative process is strictly governed by the narrative architecture of Robert McKee (Story) and Stanislavskian behavioral subtext.
 
-We are starting PHASE 1: THE COSMOLOGY & THE DIGITAL ACTORS of our short film script pipeline.
-Analyze this customizable premise:
+We are starting PHASE 1: THE COSMOLOGY & THE DIGITAL ACTORS of our short film pipeline.
+
+Analyze the following premise:
 "${targetPremise}"
 
-Generate THREE distinct narrative directions for this setup. For each option, you must output a raw, well-structured JSON array matching this exact structural schema:
+Generate THREE distinct narrative directions for this setup. For each option, output a raw, well-structured JSON array matching this exact structural schema:
 
 [
   {
     "option_id": 1,
     "title": "Story Title Here",
     "setting": {
-      "dimensions": { 
-        "period": "E.g., Near-future corporate espionage era", 
-        "duration": "E.g., 15 minutes in real-time", 
-        "location": "E.g., Rooftop Bio-Dome Penthouse", 
-        "conflict_level": "E.g., Extra-personal & Personal Conflict" 
-      }, 
+      "dimensions": {
+        "period": "E.g., Near-future corporate espionage era",
+        "duration": "E.g., 15 minutes in real-time",
+        "location": "E.g., Rooftop Bio-Dome Penthouse",
+        "conflict_level": "E.g., Extra-personal & Personal Conflict"
+      },
       "creative_limitation": "E.g., Confined to a single dining table set inside a hyper-responsive greenhouse"
-    }, 
-    "meaning": { 
-      "controlling_idea": "Value + Cause (How the climax is resolved)", 
-      "dialectical_debate": { 
-        "positive_idea": "The belief validating the protagonist's starting mask", 
-        "negative_counter_idea": "The opposing truth forcing vulnerability" 
-      }, 
+    },
+    "meaning": {
+      "premise": "What if...",
+      "controlling_idea": "Value + Cause (how the climax resolves)",
+      "dialectical_debate": {
+        "positive_idea": "The belief validating the protagonist's starting mask",
+        "negative_counter_idea": "The opposing truth forcing vulnerability"
+      },
       "props_sheet": [
-        { "name": "Prop Name", "description": "How it acts as an dynamic narrative catalyst" }
-      ] 
+        { "name": "Prop Name", "description": "How it acts as an interactive narrative catalyst" }
+      ]
     },
     "characters": [
       {
@@ -293,7 +335,7 @@ Reject all surface-level tropes and empty exposition. Output ONLY the raw JSON. 
       config: {
         responseMimeType: "application/json",
         thinkingConfig: { thinkingBudget: 8000 },
-        systemInstruction: "You are an elite Hollywood script analyst. Analyze the customizable premise and generate exactly three McKee-compliant story directions matching the Lego Character Profile schema in JSON.",
+        systemInstruction: "You are an elite, award-winning Hollywood screenwriter and script analyst. Your creative process is strictly governed by the narrative architecture of Robert McKee (Story) and Stanislavskian behavioral subtext. Output ONLY raw JSON — no markdown, no code fences, no explanation.",
       },
     });
 

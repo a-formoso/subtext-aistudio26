@@ -1,0 +1,144 @@
+[
+  {
+    "option_id": 1,
+    "title": "Story Title Here",
+    "setting": {
+      "dimensions": {
+        "period": "E.g., Near-future corporate espionage era",
+        "duration": "E.g., 15 minutes in real-time",
+        "location": "E.g., Rooftop Bio-Dome Penthouse",
+        "conflict_level": "E.g., Extra-personal & Personal Conflict"
+      },
+      "creative_limitation": "E.g., Confined to a single dining table set inside a hyper-responsive greenhouse"
+    },
+    "meaning": {
+      "premise": "What if...",
+      "controlling_idea": "Value + Cause (how the climax resolves)",
+      "dialectical_debate": {
+        "positive_idea": "The belief validating the protagonist's starting mask",
+        "negative_counter_idea": "The opposing truth forcing vulnerability"
+      },
+      "props_sheet": [
+        {
+          "name": "Prop Name",
+          "description": "How it acts as an interactive narrative catalyst"
+        }
+      ]
+    },
+    "characters": [
+      {
+        "id": "char_1",
+        "identity": {
+          "name": "Character Name",
+          "archetype": "Dramatic archetype function (e.g., The Saboteur, The Fallen Sentinel)",
+          "cast_orbit": "Protagonist (Core Star) / First Circle Foil / Second Circle Utility",
+          "gravity": "Core narrative purpose driving the plot",
+          "foil_relationship": "Explicit contrast relationship with target character ID (e.g., char_2)",
+          "pov": "Reliability/Observer status (e.g., Unreliable Narrator)",
+          "scale_class": "Class A [Human] / Class B [Small] / Class C [Massive]",
+          "height": "Numerical height (e.g., 180cm or 5cm)"
+        },
+        "visuals": {
+          "core_body": "Strict physical tokens (Age, Gender, Build, Skin Tone, Hair, Eyes, Distinguishing Features)",
+          "material_texture": "Strict rendering textures verbatim (e.g., pore texture, subsurface scattering, cinematic lighting)",
+          "wardrobe": {
+            "outer_mask": "Outfit A: Armor/public clothes representing social persona",
+            "inner_vulnerability": "Outfit B: Softer, personal context clothing layers representing true self",
+            "accessories": "Fixed, non-changing physical items worn/carried (e.g. silver signet ring)"
+          },
+          "negative_prompt": "Unwanted elements to exclude during image generation (e.g., plastic skin, low resolution, 3d render)"
+        },
+        "kinetics": {
+          "posture": "Physical stance and natural state of skeletal balance",
+          "weight_distribution": "How weight shift dictates physical movement",
+          "gait": "Standard walk cycle pattern and cadence",
+          "gesture_vocabulary": "Frequent physical tics, hand habits, or defensive gestures",
+          "micro_movements": "Subtle eye, jaw, or finger adjustments for high-fidelity CGI",
+          "reaction_tempo": "Response latency to external stimuli (e.g., 200ms lag under pressure)"
+        },
+        "cinematics": {
+          "framing": "Optimal camera lens/distance preset for emotional delivery",
+          "color_palette": ["primary color name/hex", "secondary color hex", "panic/climax state color hex"],
+          "lighting": "Lighting key/mood preset"
+        },
+        "audio": {
+          "voice_identity": {
+            "sonic_anchor": "Voice blending formula (e.g., Cillian Murphy's cold cadence + George Clooney's warm register)",
+            "voice_clone_id": "eleven_labs_voice_preset_or_cloning_seed"
+          },
+          "performance_styling": {
+            "timbre": "Base tonal descriptor (e.g., gravelly, soft rasp, melodic)",
+            "tempo": "Standard verbal pacing, presence of pauses"
+          },
+          "state_telemetry": {
+            "neutral_state": {
+              "stability": 75,
+              "similarity_boost": 75,
+              "style_exaggeration": 15,
+              "stress_cues": "Even breathing, calm projection, highly structured articulation"
+            },
+            "tension_state": {
+              "stability": 50,
+              "similarity_boost": 75,
+              "style_exaggeration": 35,
+              "stress_cues": "Slight micro-pauses, swallowing hard between sentences, tight projection"
+            },
+            "panic_state": {
+              "stability": 30,
+              "similarity_boost": 75,
+              "style_exaggeration": 65,
+              "stress_cues": "Voice cracking under strain, shallow rapid exhalations, sudden catching in the throat"
+            }
+          },
+          "monologue_script": "A 15-20 second monologue script explaining the character's worldview"
+        },
+        "psychology": {
+          "social": "Public mask used to control/navigate power",
+          "personal": "Behavioral texture used during moments of intimacy",
+          "core": "Underlying identity center that is fiercely guarded",
+          "hidden": "Unconscious traumas, fears, or repressions"
+        },
+        "metrics": {
+          "personality": {
+            "openness": 50,
+            "conscientiousness": 50,
+            "extraversion": 50,
+            "agreeableness": 50,
+            "neuroticism": 50
+          },
+          "quotients": {
+            "iq": 100,
+            "eq": 100,
+            "pq": 100,
+            "cq": 100
+          }
+        },
+        "motivation": {
+          "drive": "One of 12 primal McKee drives (e.g., Survival, Meaning, Power)",
+          "signature_move": "The specific, unexpected behavioral pattern used to solve problems under pressure",
+          "litmus_test": "[SUBJECT] wants [Goal], BUT faces [Constraint] while battling [Flaw], SO they [Signature Move]",
+          "conscious_desire": "The Spine: what the character thinks they want",
+          "unconscious_need": "The Absolute Contradiction: what they actually need",
+          "empathy_hook": "Core piece of vulnerability that makes the audience care",
+          "dilemma_type": "Irreconcilable Goods vs. Lesser of Evils",
+          "dilemma_desc": "Climax choice parameter",
+          "cinematic_proof": "A 1-paragraph visual scene proving this signature tactic in action"
+        },
+        "arc": {
+          "trajectory": "Arc name (e.g., Redemption, Degeneration)",
+          "step_1_preparation": "Initial state of unexpressed potential/void",
+          "step_2_revelation": "High-stakes situation where mask is stripped",
+          "step_3_change": "Sequence value transitions (e.g., Control [+] to Exposure [---])",
+          "step_4_completion": "Final action resolving desire and fulfilling need"
+        },
+        "prompts": {
+          "master_visual_reference": {
+            "character_name": "Character Name",
+            "core_keywords_used": "CORE_BODY keywords + MATERIAL_TEXTURE keywords",
+            "master_grid_prompt": "A master character design reference sheet for [core_body], [material_texture], wearing [outer_mask]. The character is [height] tall. 10-panel 5x2 grid. Top Row: Full-body Front View (0 deg), Full-body 3/4 Front View (45 deg), Full-body Profile View (90 deg), Full-body 3/4 Back View (135 deg), Full-body Back View (180 deg), Solid light grey background next to a vertical measurement bar positioned on the LEFT displaying markings for Class A/B/C metrics in clear black text. Bottom Row: Close-up Headshots showing Neutral Front View (0 deg), Neutral Profile, Joy/Laughter, Anger/Rage, Sadness/Grief. Soft even studio lighting, high-fidelity reference style. --ar 16:9"
+          }
+        }
+      }
+    ]
+  }
+]
