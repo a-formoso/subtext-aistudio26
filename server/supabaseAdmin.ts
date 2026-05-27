@@ -10,12 +10,28 @@ if (!(globalThis as any).WebSocket) {
   };
 }
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-  global: { fetch: fetch },
+function createAdminClient() {
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null;
+  }
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: { fetch: fetch },
+  });
+}
+
+export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
+  get(_target, prop) {
+    const client = createAdminClient();
+    if (!client) {
+      if (prop === "auth") return { getUser: async () => ({ data: { user: null }, error: new Error("Supabase not configured") }) };
+      return () => Promise.resolve({ data: null, error: new Error("Supabase not configured") });
+    }
+    return (client as any)[prop];
+  },
 });
 
 export type TierName = "none" | "trial" | "playwright" | "director" | "studio";
