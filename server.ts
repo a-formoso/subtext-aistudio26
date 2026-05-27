@@ -54,18 +54,78 @@ function isBillingOrQuotaError(e: any): boolean {
   return msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("prepayment") || msg.includes("quota") || msg.includes("RATE_LIMIT");
 }
 
+// Strip thinkingConfig — not supported on gemini-2.0-flash
+function stripThinking(params: any): any {
+  const p = { ...params };
+  if (p.config) {
+    const { thinkingConfig, ...rest } = p.config;
+    p.config = Object.keys(rest).length ? rest : undefined;
+  }
+  return p;
+}
+
 async function generateWithFallback(params: Parameters<GoogleGenAI["models"]["generateContent"]>[0]): Promise<ReturnType<GoogleGenAI["models"]["generateContent"]>> {
   const ai = getGeminiClient();
   try {
     return await ai.models.generateContent({ ...params, model: PRIMARY_MODEL });
   } catch (e: any) {
     if (isBillingOrQuotaError(e)) {
-      console.warn(`[Gemini] ${PRIMARY_MODEL} quota/billing error, falling back to ${FALLBACK_MODEL}`);
-      return await ai.models.generateContent({ ...params, model: FALLBACK_MODEL });
+      console.warn(`[Gemini] ${PRIMARY_MODEL} quota/billing error — falling back to ${FALLBACK_MODEL}`);
+      return await ai.models.generateContent({ ...stripThinking(params), model: FALLBACK_MODEL });
     }
     throw e;
   }
 }
+
+// ── /api/status — lightweight health check for both AI services ──
+app.get("/api/status", async (req, res) => {
+  const status = { gemini: false, geminiModel: "", higgsfield: false };
+
+  // Check Gemini
+  try {
+    const ai = getGeminiClient();
+    await ai.models.generateContent({
+      model: PRIMARY_MODEL,
+      contents: "Reply with the word OK only.",
+      config: { maxOutputTokens: 5 },
+    });
+    status.gemini = true;
+    status.geminiModel = PRIMARY_MODEL;
+  } catch (e: any) {
+    if (isBillingOrQuotaError(e)) {
+      // Try free-tier fallback
+      try {
+        const ai = getGeminiClient();
+        await ai.models.generateContent({
+          model: FALLBACK_MODEL,
+          contents: "Reply with the word OK only.",
+          config: { maxOutputTokens: 5 },
+        });
+        status.gemini = true;
+        status.geminiModel = FALLBACK_MODEL;
+      } catch (_) {
+        status.gemini = false;
+        status.geminiModel = "";
+      }
+    }
+  }
+
+  // Check Higgsfield — lightweight auth ping
+  const apiKey = process.env.HIGGSFIELD_API_KEY;
+  const secret = process.env.HIGGSFIELD_SECRET;
+  if (apiKey && secret) {
+    try {
+      const r = await fetch("https://api.higgsfield.ai/v1/jobs?limit=1", {
+        headers: { Authorization: `Bearer ${apiKey}`, "X-Secret": secret },
+      });
+      status.higgsfield = r.ok || r.status === 200 || r.status === 404;
+    } catch (_) {
+      status.higgsfield = false;
+    }
+  }
+
+  res.json(status);
+});
 
 // Config endpoint — exposes public Supabase credentials to the browser
 app.get("/api/config", (req, res) => {

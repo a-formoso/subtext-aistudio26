@@ -18,6 +18,7 @@ import { usageLabel, isLimitReached, canAccessPhase } from "./lib/accessTier";
 import { PhaseUpsell } from "./components/PhaseUpsell";
 import { motion, AnimatePresence } from "motion/react";
 import { PanelRightOpen, PanelRightClose, LogOut, AlertTriangle } from "lucide-react";
+import { ServiceStatus } from "./components/ServiceStatus";
 
 type Phase = 1 | 2 | 3 | 4 | 5 | 6;
 type AppView = "landing" | "app" | "upgrade";
@@ -298,6 +299,9 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* AI service status */}
+            <ServiceStatus />
+
             {/* Usage pill */}
             <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-mono uppercase tracking-wider transition-colors ${
               shotAtLimit ? "border-red-500/40 bg-red-500/10 text-red-400" :
