@@ -1,0 +1,97 @@
+{
+  "title": "[Chosen Story Title]",
+  "setting": "[Paste from Phase 1 chosen option]",
+  "meaning": "[Paste from Phase 1 chosen option — including premise field]",
+  "characters": "[Paste from Phase 1 chosen option — full characters array]",
+  "sequences": {
+    "act_one_sequences": [
+      {
+        "sequence_id": "A1_S1",
+        "act": "ACT ONE",
+        "actLabel": "Set-Up",
+        "title": "Sequence Title",
+        "setting_macro": "The starting location",
+        "themeFocus": "E.g., Control - Isolation - Illusion",
+        "dramatic_arc": "Brief description of the value shift in this sequence",
+        "scenes": [
+          {
+            "scene_number": 1,
+            "setting_micro": "E.g., Boardroom Chair - ECU",
+            "scene_objective": "What char_1 physically/situationally wants (Reference character ID)",
+            "opening_value": "Starting value charge",
+            "closing_value": "Ending value charge",
+            "narrative_action": "How action collides with the world to open The Gap (reference litmus_test and signature_move)",
+            "visualDesc": "Broad, atmospheric, stylistic layout of setting_macro"
+          }
+        ]
+      }
+    ],
+    "act_two_sequences": [
+      {
+        "sequence_id": "A2_S1",
+        "act": "ACT TWO",
+        "actLabel": "Confrontation",
+        "title": "Sequence Title",
+        "setting_macro": "The new macro setting location",
+        "themeFocus": "E.g., Exposure - Disorientation",
+        "dramatic_arc": "Description of the value escalation",
+        "scenes": [
+          {
+            "scene_number": 2,
+            "setting_micro": "E.g., Vivarium Door - Wide",
+            "scene_objective": "Target scene goal (reference char_id)",
+            "opening_value": "",
+            "closing_value": "",
+            "narrative_action": "",
+            "visualDesc": ""
+          }
+        ]
+      }
+    ],
+    "act_three_sequences": [
+      {
+        "sequence_id": "A3_S1",
+        "act": "ACT THREE",
+        "actLabel": "Resolution",
+        "title": "Sequence Title",
+        "setting_macro": "The climax macro setting",
+        "themeFocus": "E.g., Connotation - Transformation",
+        "dramatic_arc": "Climax and Resolution transition arc",
+        "scenes": [
+          {
+            "scene_number": 5,
+            "setting_micro": "E.g., Core Interface - Close",
+            "scene_objective": "",
+            "opening_value": "",
+            "closing_value": "",
+            "narrative_action": "",
+            "visualDesc": ""
+          }
+        ]
+      }
+    ]
+  },
+  "beats": [
+    {
+      "target_sequence_id": "A1_S1",
+      "scene_number": 1,
+      "micro_blueprint": {
+        "scene_objective": "Scene target objective",
+        "opening_value": "Opening emotional/moral value charge",
+        "closing_value": "Closing value charge after beat progression",
+        "subtextual_beat_progression": [
+          {
+            "beat_number": 1,
+            "action": "char_1: ACTIVE GERUND + KINETIC DETAIL (e.g., FEIGNING ACCOUNTABILITY while compulsively turning his signet ring)",
+            "reaction": "char_2: ACTIVE GERUND + KINETIC REACT (e.g., MANAGING THE TRAP, her eyes tracking his hand movements)",
+            "text": "The literal spoken line acting as a surface mask",
+            "vocal_state": "neutral_state | tension_state | panic_state",
+            "status": "Psychological tension indicator (e.g., Internal Pressure: 72%, Heartrate: 94bpm)",
+            "visual_flora": "Biochemical shift of greenhouse flora triggered by stress metrics (e.g., orchids pulse defensive amber)"
+          }
+        ]
+      }
+    }
+  ],
+  "logline": "A single, high-velocity sentence: protagonist, inciting incident, Spine, and central ironic stakes."
+}
