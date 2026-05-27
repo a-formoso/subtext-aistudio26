@@ -154,6 +154,10 @@ export interface MasterVisualReference {
   character_name: string;
   core_keywords_used: string;
   master_grid_prompt: string;
+  master_grid_prompt_state2?: string;
+  master_grid_prompt_state3?: string;
+  master_grid_prompt_state4?: string;
+  [key: string]: string | undefined;
 }
 
 export interface Character {
@@ -268,6 +272,7 @@ export interface StylePreset {
 
 export interface SubtextualBeat {
   beat_number: number;
+  shot_id?: string; // e.g. "A1_Q1_S1_B1" — reference key for Phase 5
   action: string;
   reaction: string;
   text: string;

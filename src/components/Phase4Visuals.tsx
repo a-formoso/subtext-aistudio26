@@ -312,6 +312,21 @@ function CharacterAssetCard({
     ?? buildMasterGridPrompt(char);
   const negativePrompt = char.visuals?.negative_prompt || undefined;
 
+  // Auto-detect arc state variants from master_grid_prompt_state2, state3, etc.
+  const arcStateVariants: { stateKey: string; stateNum: number; prompt: string }[] = [];
+  const ref = char.prompts?.master_visual_reference as Record<string, string | undefined> | undefined;
+  if (ref) {
+    let i = 2;
+    while (ref[`master_grid_prompt_state${i}`]) {
+      arcStateVariants.push({
+        stateKey: `master_grid_prompt_state${i}`,
+        stateNum: i,
+        prompt: ref[`master_grid_prompt_state${i}`]!,
+      });
+      i++;
+    }
+  }
+
   const confirmVariant = () => {
     if (!variantLabel.trim()) return;
     onAddVariant(variantLabel.trim(), variantArcStep.trim());
@@ -333,6 +348,30 @@ function CharacterAssetCard({
         onApprove={onApprove}
       />
 
+      {/* Arc state variants — auto-detected from master_grid_prompt_state2/3/etc. */}
+      {arcStateVariants.map(sv => {
+        const assetId = `${char.id}_arc_state${sv.stateNum}`;
+        const arcLabel = `Arc State ${sv.stateNum} — ${char.arc?.step_3_change || "Post-transition"}`;
+        return (
+          <div key={sv.stateKey} className="border-t border-white/8 pt-5">
+            <ReferenceGrid
+              title={`${char.identity?.name || "Character"} — State ${sv.stateNum}`}
+              subtitle={arcLabel}
+              description={char.arc?.step_3_change}
+              assetId={assetId}
+              asset={variantAssets[assetId]}
+              approved={variantApproved.has(assetId)}
+              prompt={sv.prompt}
+              negativePrompt={negativePrompt}
+              onGenerate={onGenerate}
+              onApprove={onApprove}
+              isVariant
+            />
+          </div>
+        );
+      })}
+
+      {/* User-added state variants */}
       {variants.map(v => {
         const variantPrompt = `${basePrompt}. STATE VARIANT: ${v.label}. Arc change: ${v.arcStep}. Maintain same character identity with adjusted wardrobe/expression/physical state.`;
         return (

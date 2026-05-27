@@ -321,7 +321,8 @@ Generate THREE distinct narrative directions for this setup. For each option, ou
           "master_visual_reference": {
             "character_name": "Character Name",
             "core_keywords_used": "Body + Material keywords",
-            "master_grid_prompt": "Ultra-detailed reference grid prompt instructions"
+            "master_grid_prompt": "Ultra-detailed reference grid prompt for the character's BASE STATE — a single wide 16:9 image rendered as a 5×2 reference sheet (10-panel grid). Top row: 5 full-body angles. Bottom row: 5 headshot expressions. Solid light-grey studio background, photorealistic, film production quality.",
+            "master_grid_prompt_state2": "Same 5×2 reference sheet prompt for the character's arc.step_3_change state (injury, wardrobe change, post-revelation appearance). Maintain identical identity, adjust only the changed physical/wardrobe details described in step_3_change."
           }
         }
       }
@@ -419,6 +420,7 @@ Output a single, consolidated JSON block matching this exact structural schema:
         "subtextual_beat_progression": [ 
           { 
             "beat_number": 1, 
+            "shot_id": "A1_Q1_S1_B1",
             "action": "E.g. char_1: FEIGNING ACCOUNTABILITY while compulsively turning his signet ring", 
             "reaction": "E.g. char_2: MANAGING THE TRAP, her eyes tracking his hand movements",
             "text": "The literal spoken mask line here",

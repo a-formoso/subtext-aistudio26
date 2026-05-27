@@ -1,0 +1,21 @@
+── PHASE 3 (Screen 03): SCREENPLAY ──
+Endpoint: POST /api/generate-phase3
+Objective: Translate the complete, locked Phase 2 JSON blueprint into a professional, production-ready screenplay with deep subtext, integrating kinetic vocabulary and dynamic vocal stress cues into the script page.
+
+Correction from original guide: The copy-paste prompt in the original guide incorrectly labelled this phase as "PHASE 5". The correct label is PHASE 3: THE SCRIPT EXECUTION.
+
+Phase 3 Input:
+Pass the full Phase 2 blueprint JSON as blueprint in the request body.
+Execution Laws (passed as system instructions):
+
+FORMAT: Standard screenplay layout. CHARACTER NAMES in uppercase at dialogue headings and action line introductions. Parentheticals denote active vocal stress states — never literal physical actions.
+DIALOGUE SUBTEXT CONSTRAINT: Every spoken line acts as a diplomatic surface mask. Dialogue must naturally deliver the psychological agendas mapped in the subtextual_beat_progression gerund tags. Characters never speak inner truths until the Story Climax.
+KINETIC PHYSICALITY: Weave each character's kinetic profile (posture, gait, gesture_vocabulary, reaction_tempo) directly into action blocks. Replace dry exposition with physical somatic gestures.
+VOCAL STATE PARENTHETICALS: Translate vocal_state from beats into precise parentheticals using the exact stress_cues text (e.g., (voice cracking under strain, shallow rapid exhalations)).
+FRENCH SCENES: Advance internal rhythm every time a character enters, exits, or radically alters power dynamics.
+VARIATION: Alternate rapid visual action blocks with expansive, emotionally dense subtextual confrontations.
+THEMATIC TRANSITIONS: Link consecutive scenes using a sensory hinge — a shared object, opposing light quality, sound bridge, or word contrast.
+VISUAL FLORA: Include visual_flora color shifts (e.g., violet, pale lavender, defensive crimson) in action blocks to represent characters' biochemical stress states.
+
+Phase 3 Output:
+Plain text screenplay in standard Hollywood format. No JSON wrapper. The script begins immediately on the first line.
