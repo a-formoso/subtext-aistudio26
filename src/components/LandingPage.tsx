@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Sparkles, Film, Zap } from "lucide-react";
+import { Sparkles, Film, Zap, Sun, Moon } from "lucide-react";
 import { AuthModal } from "./AuthModal";
+import { useTheme } from "../context/ThemeContext";
 
 interface LandingPageProps {
   onAuthenticated: () => void;
@@ -28,14 +29,15 @@ const FEATURES = [
 export function LandingPage({ onAuthenticated }: LandingPageProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"signin" | "signup">("signin");
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const openSignIn = () => { setModalMode("signin"); setModalOpen(true); };
   const openSignUp = () => { setModalMode("signup"); setModalOpen(true); };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
+    <div className="min-h-screen flex flex-col font-sans" style={{ background: "var(--bg-app)", color: "var(--text-base)" }}>
       {/* Nav */}
-      <nav className="flex items-center justify-between px-8 py-5 border-b border-white/8">
+      <nav className="flex items-center justify-between px-8 py-5 backdrop-blur-sm" style={{ borderBottom: "1px solid var(--border-faint)" }}>
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 bg-[#FF3D00] rounded-sm flex items-center justify-center font-bold text-white text-xs tracking-tighter">IS</div>
           <div>
@@ -43,12 +45,24 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
             <p className="text-[9px] text-[#FF3D00] uppercase tracking-widest leading-none mt-0.5">Screenwriting Playbook</p>
           </div>
         </div>
-        <button
-          onClick={openSignIn}
-          className="text-xs font-mono text-slate-400 hover:text-white transition-colors cursor-pointer"
-        >
-          Sign In
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark"
+              ? <Sun className="w-3.5 h-3.5 text-slate-400" />
+              : <Moon className="w-3.5 h-3.5 text-slate-400" />
+            }
+          </button>
+          <button
+            onClick={openSignIn}
+            className="text-xs font-mono text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            Sign In
+          </button>
+        </div>
       </nav>
 
       {/* Hero */}
@@ -64,7 +78,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
             Screenwriting Playbook v4.1
           </div>
 
-          <h2 className="text-5xl sm:text-6xl font-bold leading-none tracking-tight">
+          <h2 className="text-5xl sm:text-6xl font-bold leading-none tracking-tight text-white">
             Your Production.<br />
             Your Pipeline.<br />
             <span className="text-[#FF3D00]">One Studio.</span>
@@ -113,7 +127,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/8 px-8 py-4 flex items-center justify-between text-[10px] font-mono text-slate-600">
+      <footer className="px-8 py-4 flex items-center justify-between text-[10px] font-mono text-slate-600" style={{ borderTop: "1px solid var(--border-faint)" }}>
         <span className="text-slate-700">© 2026 Infinite Studio AI. All rights nominal.</span>
         <span>A product of Infinite Studio AI · <a href="https://infinitestudioai.com" target="_blank" rel="noreferrer" className="hover:text-slate-400 transition-colors">infinitestudioai.com</a></span>
       </footer>

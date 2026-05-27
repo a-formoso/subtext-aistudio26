@@ -17,8 +17,9 @@ import { saveProduction, type Production } from "./lib/productions";
 import { usageLabel, isLimitReached, canAccessPhase } from "./lib/accessTier";
 import { PhaseUpsell } from "./components/PhaseUpsell";
 import { motion, AnimatePresence } from "motion/react";
-import { PanelRightOpen, PanelRightClose, LogOut, AlertTriangle } from "lucide-react";
+import { PanelRightOpen, PanelRightClose, LogOut, AlertTriangle, Sun, Moon } from "lucide-react";
 import { ServiceStatus } from "./components/ServiceStatus";
+import { useTheme } from "./context/ThemeContext";
 
 type Phase = 1 | 2 | 3 | 4 | 5 | 6;
 type AppView = "landing" | "app" | "upgrade";
@@ -39,6 +40,7 @@ const PHASE_TO_STATUS: Record<Phase, Production["status"]> = {
 
 export default function App() {
   const { user, loading, accessTier, usage, signOut, refreshAccess } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   // View routing
   const [view, setView] = useState<AppView>("landing");
@@ -236,7 +238,7 @@ export default function App() {
   // ── Loading splash ──
   if (loading) {
     return (
-      <div className="h-screen bg-[#0A0A0A] flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center" style={{ background: "var(--bg-app)" }}>
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 bg-[#FF3D00] rounded-sm animate-pulse" />
           <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">Loading…</span>
@@ -257,13 +259,13 @@ export default function App() {
 
   // ── Main App ──
   return (
-    <div className="h-screen overflow-hidden bg-[#08080a] text-gray-200 flex flex-col font-sans select-text">
+    <div className="h-screen overflow-hidden flex flex-col font-sans select-text" style={{ background: "var(--bg-app)", color: "var(--text-base)" }}>
       <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-orange-950/5 to-transparent pointer-events-none z-0" />
 
-      <div className="w-full max-w-7xl mx-auto my-3 bg-[#08080a] border border-white/10 rounded-2xl flex flex-col shadow-[0_24px_64px_-12px_rgba(0,0,0,0.8)] z-10 relative overflow-hidden" style={{ height: "calc(100vh - 24px)" }}>
+      <div className="w-full max-w-7xl mx-auto my-3 border rounded-2xl flex flex-col z-10 relative overflow-hidden" style={{ height: "calc(100vh - 24px)", background: "var(--bg-app)", borderColor: "var(--border)", boxShadow: "var(--shadow-main)" }}>
 
         {/* ── Nav Header ── */}
-        <nav className="h-14 border-b border-white/10 flex items-center justify-between px-5 bg-black/40 backdrop-blur-md shrink-0 gap-4">
+        <nav className="h-14 flex items-center justify-between px-5 backdrop-blur-md shrink-0 gap-4" style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-nav)" }}>
           <div className="flex items-center gap-3 shrink-0">
             <div className="w-7 h-7 bg-[#FF3D00] rounded-sm flex items-center justify-center font-bold text-white text-xs tracking-tighter">IS</div>
             <div className="hidden sm:block">
@@ -299,8 +301,17 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* AI service status */}
-            <ServiceStatus />
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark"
+                ? <Sun className="w-3.5 h-3.5 text-slate-400" />
+                : <Moon className="w-3.5 h-3.5 text-slate-400" />
+              }
+            </button>
 
             {/* Usage pill */}
             <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-mono uppercase tracking-wider transition-colors ${
@@ -372,7 +383,7 @@ export default function App() {
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
           {/* Sidebar: Phase number nav */}
-          <aside className="w-full md:w-14 border-b md:border-b-0 md:border-r border-white/10 flex md:flex-col items-center py-3 md:py-6 justify-around md:justify-start gap-3 md:gap-8 shrink-0 bg-[#0a0a0d]">
+          <aside className="w-full md:w-14 flex md:flex-col items-center py-3 md:py-6 justify-around md:justify-start gap-3 md:gap-8 shrink-0" style={{ borderBottom: "1px solid var(--border)", borderRight: "1px solid var(--border)", background: "var(--bg-sidebar)" }}>
             {PHASES.map(p => (
               <button
                 key={p.id}
@@ -392,8 +403,12 @@ export default function App() {
               </button>
             ))}
 
-            <div className="hidden md:block mt-auto mb-3">
-              <div className="w-0.5 h-24 bg-white/5 rounded-full relative overflow-hidden">
+            <div className="hidden md:flex flex-col items-center gap-3 mt-auto mb-2">
+              {/* AI service indicators */}
+              <ServiceStatus compact />
+
+              {/* Progress bar */}
+              <div className="w-0.5 h-16 bg-white/5 rounded-full relative overflow-hidden">
                 <div
                   className="absolute top-0 w-full bg-[#FF3D00]/60 transition-all duration-500"
                   style={{ height: `${((activePhase - 1) / 5) * 100}%` }}
@@ -405,7 +420,7 @@ export default function App() {
           {/* Main workspace */}
           <main className={`flex-1 overflow-hidden flex ${sidebarOpen ? "flex-col lg:flex-row" : ""}`}>
             {/* Primary content */}
-            <section className={`flex-1 p-5 flex flex-col gap-5 overflow-y-auto bg-gradient-to-br from-[#0e0e12] to-[#08080a] min-h-[400px] ${sidebarOpen ? "lg:border-r border-white/10" : ""}`}>
+            <section className={`flex-1 p-5 flex flex-col gap-5 overflow-y-auto min-h-[400px] ${sidebarOpen ? "lg:border-r" : ""}`} style={{ background: "var(--bg-panel)", ...(sidebarOpen ? { borderRightColor: "var(--border)" } : {}) }}>
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <div>
                   <span className="text-[9px] uppercase tracking-[0.25em] text-slate-500 font-mono font-bold mb-0.5 block">
@@ -497,7 +512,8 @@ export default function App() {
                   animate={{ width: 280, opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="shrink-0 bg-[#0a0a0e] overflow-hidden border-t lg:border-t-0 border-white/10"
+                  className="shrink-0 overflow-hidden border-t lg:border-t-0"
+                  style={{ background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
                 >
                   <div className="w-[280px] p-4 flex flex-col gap-4 h-full overflow-y-auto">
                     <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest font-bold">Session · Data Panel</span>
@@ -603,7 +619,7 @@ export default function App() {
         </div>
 
         {/* Footer */}
-        <footer className="h-9 border-t border-white/10 bg-black flex items-center px-5 justify-between text-[9px] font-mono tracking-tighter text-gray-500 shrink-0">
+        <footer className="h-9 flex items-center px-5 justify-between text-[9px] font-mono tracking-tighter text-gray-500 shrink-0" style={{ borderTop: "1px solid var(--border)", background: "var(--bg-nav)" }}>
           <div className="flex gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
