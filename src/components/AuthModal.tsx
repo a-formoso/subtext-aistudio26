@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -19,6 +19,11 @@ export function AuthModal({ open, initialMode, onClose, onAuthenticated }: AuthM
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  // Re-sync mode whenever the modal opens with a new initialMode
+  useEffect(() => {
+    if (open) setMode(initialMode);
+  }, [open, initialMode]);
 
   const reset = () => {
     setError(null); setInfo(null);

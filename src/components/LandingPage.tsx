@@ -114,8 +114,8 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
 
       {/* Footer */}
       <footer className="border-t border-white/8 px-8 py-4 flex items-center justify-between text-[10px] font-mono text-slate-600">
-        <span>A product of Infinite Studio AI · <a href="https://infinitestudioai.com" target="_blank" rel="noreferrer" className="hover:text-slate-400 transition-colors">infinitestudioai.com</a></span>
         <span className="text-slate-700">© 2026 Infinite Studio AI. All rights nominal.</span>
+        <span>A product of Infinite Studio AI · <a href="https://infinitestudioai.com" target="_blank" rel="noreferrer" className="hover:text-slate-400 transition-colors">infinitestudioai.com</a></span>
       </footer>
 
       <AuthModal
