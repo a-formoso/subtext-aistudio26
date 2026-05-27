@@ -46,6 +46,27 @@ function getGeminiClient(): GoogleGenAI {
   return aiClient;
 }
 
+const PRIMARY_MODEL = "gemini-3.5-flash";
+const FALLBACK_MODEL = "gemini-2.0-flash";
+
+function isBillingOrQuotaError(e: any): boolean {
+  const msg = e?.message || "";
+  return msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("prepayment") || msg.includes("quota") || msg.includes("RATE_LIMIT");
+}
+
+async function generateWithFallback(params: Parameters<GoogleGenAI["models"]["generateContent"]>[0]): Promise<ReturnType<GoogleGenAI["models"]["generateContent"]>> {
+  const ai = getGeminiClient();
+  try {
+    return await ai.models.generateContent({ ...params, model: PRIMARY_MODEL });
+  } catch (e: any) {
+    if (isBillingOrQuotaError(e)) {
+      console.warn(`[Gemini] ${PRIMARY_MODEL} quota/billing error, falling back to ${FALLBACK_MODEL}`);
+      return await ai.models.generateContent({ ...params, model: FALLBACK_MODEL });
+    }
+    throw e;
+  }
+}
+
 // Config endpoint — exposes public Supabase credentials to the browser
 app.get("/api/config", (req, res) => {
   res.json({
@@ -207,8 +228,7 @@ Generate THREE distinct narrative directions for this setup. For each option, yo
 
 Reject all surface-level tropes and empty exposition. Output ONLY the raw JSON. Do not include markdown wraps or prefixing.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+    const response = await generateWithFallback({
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -312,8 +332,7 @@ Output a single, consolidated JSON block matching this exact structural schema:
 
 Generate detailed beat_progressions (minimum 3 beats per scene) for ALL scenes across Acts I, II, and III. Make sure every beat features active, capitalized gerund subtext tags and references vocal_state values. Ensure output is strictly Valid JSON.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+    const response = await generateWithFallback({
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -364,8 +383,7 @@ Write the final, production-ready screenplay based strictly on this data structu
 
 Include the visual_flora color shifts (e.g., violet, pale yellow, mottled, defensive crimson) in the action blocks to visually represent the characters' sweat and adrenaline changes. Begin the script immediately.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+    const response = await generateWithFallback({
       contents: prompt,
       config: {
         thinkingConfig: { thinkingBudget: 8000 },
