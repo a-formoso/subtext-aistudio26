@@ -675,6 +675,106 @@ app.get("/api/job-status/:jobId", async (req, res) => {
   }
 });
 
+// ── /api/elevenlabs/synthesize — generate character voice audio ──
+app.post("/api/elevenlabs/synthesize", async (req, res) => {
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    return res.status(200).json({ success: false, needsApiKey: true, message: "ELEVENLABS_API_KEY not set in Secrets." });
+  }
+
+  const { voiceId, text, stability, similarityBoost, styleExaggeration } = req.body;
+  if (!voiceId || !text) {
+    return res.status(400).json({ success: false, message: "voiceId and text are required." });
+  }
+
+  try {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+      },
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability: (stability ?? 75) / 100,
+          similarity_boost: (similarityBoost ?? 75) / 100,
+          style: (styleExaggeration ?? 15) / 100,
+          use_speaker_boost: true,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("ElevenLabs error:", errText.slice(0, 300));
+      return res.status(200).json({ success: false, message: `ElevenLabs returned ${response.status}: ${errText.slice(0, 200)}` });
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    const base64Audio = Buffer.from(audioBuffer).toString("base64");
+    res.json({ success: true, audioBase64: base64Audio, mimeType: "audio/mpeg" });
+  } catch (error: any) {
+    console.error("ElevenLabs synthesis failed:", error.message);
+    res.status(200).json({ success: false, message: error.message });
+  }
+});
+
+// ── /api/virality-score — Gemini-powered virality analysis ──
+app.post("/api/virality-score", async (req, res) => {
+  const { blueprint, clipOrder } = req.body;
+  if (!blueprint) {
+    return res.status(400).json({ success: false, message: "blueprint is required." });
+  }
+
+  try {
+    const title = blueprint.title || "Untitled";
+    const logline = blueprint.logline || blueprint.step_6_master_logline || "";
+    const clipsDesc = (clipOrder || []).slice(0, 6).map((c: any) =>
+      `- Shot ${c.shotId}: "${c.beatText}" | Flora: ${c.flora} | Vocal: ${c.vocal}`
+    ).join("\n");
+
+    const prompt = `You are a film virality analyst. Score this short film assembly for social media engagement potential.
+
+TITLE: ${title}
+LOGLINE: ${logline}
+CLIP SEQUENCE (first 6 shots):
+${clipsDesc || "No clips provided."}
+
+Return a JSON object with this exact shape:
+{
+  "emotional_impact": <0-100 integer>,
+  "visual_novelty": <0-100 integer>,
+  "pacing_score": <0-100 integer>,
+  "overall": <0-100 integer — weighted average>,
+  "recommendation": "<one concise actionable sentence>",
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "weaknesses": ["<weakness 1>"]
+}
+
+Base scores on: narrative tension, pacing variety, visual uniqueness of flora/environment descriptors, vocal state escalation arc, and subtext density. Output ONLY raw JSON.`;
+
+    const response = await generateWithFallback({
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 2000 },
+        systemInstruction: "You are a film virality analyst. Output only raw JSON.",
+      },
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("Empty response.");
+    const parsed = JSON.parse(cleanJSONString(text));
+    res.json({ success: true, scores: parsed });
+  } catch (error: any) {
+    console.error("Virality scoring failed:", error.message);
+    res.status(200).json({ success: false, message: error.message });
+  }
+});
+
 // Serve frontend assets
 async function startServer() {
   const httpServer = http.createServer(app);
