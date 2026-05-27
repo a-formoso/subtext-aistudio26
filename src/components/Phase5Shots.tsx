@@ -32,7 +32,7 @@ interface ShotJob {
 }
 
 type FlatShot = {
-  shotId: string; seqId: string; seqTitle: string; sceneNum: number;
+  shotId: string; blueprintShotId?: string; seqId: string; seqTitle: string; sceneNum: number;
   beatNum: number; text: string; action: string; reaction: string;
   flora: string; vocal: string; framing: string; setting: string;
   charName: string; charId: string; settingAbbrev: string;
@@ -76,6 +76,7 @@ export function Phase5Shots({ blueprint, onProceed, characterVariants = [] }: Ph
         const settingRaw = scene.setting_micro || seq.setting_macro || "";
         flatShots.push({
           shotId,
+          blueprintShotId: (beat as any).shot_id || undefined,
           seqId: seq.sequence_id,
           seqTitle: seq.title,
           sceneNum: scene.scene_number,
@@ -437,6 +438,32 @@ export function Phase5Shots({ blueprint, onProceed, characterVariants = [] }: Ph
                         <span className="text-[10px] font-mono text-slate-600">Press Generate Image to render this shot</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* Shot ID cross-reference */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-950/30 border border-orange-500/25">
+                      <span className="font-mono text-[8px] text-slate-500 uppercase tracking-widest">Shot ID</span>
+                      <span className="font-mono text-[10px] font-bold text-orange-400">{activeShot.shotId}</span>
+                    </div>
+                    {activeShot.blueprintShotId && activeShot.blueprintShotId !== activeShot.shotId && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-violet-950/30 border border-violet-500/25">
+                        <span className="font-mono text-[8px] text-slate-500 uppercase tracking-widest">Blueprint</span>
+                        <span className="font-mono text-[10px] font-bold text-violet-400">{activeShot.blueprintShotId}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/40 border border-white/8">
+                      <span className="font-mono text-[8px] text-slate-500 uppercase tracking-widest">Vocal</span>
+                      <span className={`font-mono text-[9px] font-bold ${
+                        activeShot.vocal === "panic_state" ? "text-red-400"
+                        : activeShot.vocal === "tension_state" ? "text-amber-400"
+                        : "text-slate-300"
+                      }`}>{activeShot.vocal.replace("_state", "").toUpperCase()}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/40 border border-white/8">
+                      <span className="font-mono text-[8px] text-slate-500 uppercase tracking-widest">Flora</span>
+                      <span className="font-mono text-[9px] text-emerald-400 line-clamp-1 max-w-[160px]">{activeShot.flora}</span>
+                    </div>
                   </div>
 
                   {/* Beat context */}

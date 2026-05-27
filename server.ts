@@ -472,26 +472,38 @@ app.post("/api/generate-phase3", async (req, res) => {
   }
 
   try {
-    const ai = getGeminiClient();
-    const prompt = `We are proceeding to PHASE 3: THE SCRIPT EXECUTION. 
+    const prompt = `PHASE 3: THE SCRIPT EXECUTION
 
-Here is our locked, consolidated Pre-Production JSON Blueprint featuring Unified Audio Telemetry specifications:
+Here is the locked, consolidated Pre-Production JSON Blueprint featuring Unified Audio Telemetry specifications:
 ${JSON.stringify(blueprint, null, 2)}
 
-Write the final, production-ready screenplay based strictly on this data structure. Adhere to the following structural and stylistic execution laws:
+Translate this blueprint into a professional, production-ready screenplay. Begin the script immediately on the first line. No JSON wrapper. Plain text only.`;
 
-1. FORMAT: Use flawless, standard screenplay layout. Use uppercase for CHARACTER NAMES in dialogue headings and action line introductions. Use parentheticals to denote active vocal stress states (neutral_state, tension_state, or panic_state) accompanied by stress_cues (e.g., "voice cracking under strain, shallow breathy gasping") to guide sound rendering.
-2. DIALOGUE SUBTEXT CONSTRAINT: Every line of spoken text must act as a diplomatic surface mask. Dialogue must naturally deliver the exact step-by-step psychological agendas mapped out in your subtextual_beat_progression gerund tags. Characters must never speak their inner truths until the script hits the raw, mask-shattering explosion of the Story Climax.
-3. KINETIC PHYSICALITY: Weave posture and kinetic body shifts (as described in each character's kinetic profiles) directly into action descriptions, replacing dry exposition with physical somatic gestures.
-4. VARIATION: Alternate rapid, visual action blocks describing environmental and physical changes with expansive, emotionally dense subtextual confrontations.
-5. THEMATIC TRANSITIONS: Link consecutive scenes using standard sensory hinges or word contrasts.
+    const systemInstruction = `You are an elite Hollywood screenwriter executing PHASE 3: THE SCRIPT EXECUTION. Translate the blueprint into a production-ready screenplay following these eight laws without exception:
 
-Include the visual_flora color shifts (e.g., violet, pale yellow, mottled, defensive crimson) in the action blocks to visually represent the characters' sweat and adrenaline changes. Begin the script immediately.`;
+1. FORMAT: Standard screenplay layout. CHARACTER NAMES in uppercase at dialogue headings and all action line introductions. Parentheticals denote active vocal stress states only — never literal physical actions.
+
+2. VOCAL STATE PARENTHETICALS: Translate each beat's vocal_state directly into a parenthetical using the exact stress_cues text from that character's state_telemetry entry. Example: if vocal_state is tension_state and stress_cues reads "Slight micro-pauses, swallowing hard between sentences", the parenthetical must be (slight micro-pauses, swallowing hard between sentences).
+
+3. DIALOGUE SUBTEXT CONSTRAINT: Every spoken line acts as a diplomatic surface mask. Dialogue must naturally deliver the psychological agendas mapped in the subtextual_beat_progression gerund tags. Characters never speak inner truths until the Story Climax mask-shattering moment.
+
+4. KINETIC PHYSICALITY: Weave each character's kinetic profile (posture, weight_distribution, gait, gesture_vocabulary, reaction_tempo, micro_movements) directly into action blocks. Replace all dry exposition with physical somatic gestures.
+
+5. FRENCH SCENES: Advance the internal rhythm every time a character enters, exits, or radically alters the power dynamic. Each French scene shift must register in the action block.
+
+6. VARIATION: Alternate rapid visual action blocks (environmental, physical, flora shifts) with expansive emotionally dense subtextual confrontations. Never run more than three consecutive action lines or three consecutive exchanges without a shift in register.
+
+7. THEMATIC TRANSITIONS: Link every consecutive scene using a sensory hinge — a shared object, opposing light quality, sound bridge, or word contrast carried from the closing line of one scene into the opening line or image of the next.
+
+8. VISUAL FLORA: Include visual_flora color shifts (e.g., violet, pale lavender, defensive crimson, mottled amber) in all action blocks to represent characters' biochemical stress states as described in the beat data.
+
+Output plain text screenplay only. Begin immediately on line 1.`;
 
     const response = await generateWithFallback({
       contents: prompt,
       config: {
         thinkingConfig: { thinkingBudget: 8000 },
+        systemInstruction,
       },
     });
 
