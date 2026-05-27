@@ -1,0 +1,463 @@
+# Infinite Studio: Playbook Execution Guide v2
+### Aligned to the 6-Phase Production Pipeline
+
+This guide details the exact 3-phase AI prompt sequence that powers the **Screenwriting Playbook** (Phases 1–3). Phases 4–6 are handled by the Higgsfield REST API and are documented separately at the end. Follow this pipeline step-by-step. All prompts match the exact `server.ts` endpoints.
+
+---
+
+> **Model Note:** All Gemini calls use `gemini-2.0-flash`. The string `gemini-3.5-flash` in older versions of `server.ts` does not exist — update to `gemini-2.0-flash` or `gemini-2.5-pro` in your Replit Secrets if you have access.
+
+---
+
+## ── PHASE 1 (Screen 01): DISCOVERY ──
+**Endpoint:** `POST /api/generate-phase1`  
+**Objective:** Establish world boundaries, dialectical argument, and generate modular, production-ready Character Sheets that unify narrative depth with precise style-locking, kinetic, and audio API telemetry. Outputs 3–4 story directions for the user to choose from.
+
+### Copy-Paste System Prompt (used in `server.ts` Phase 1 endpoint):
+
+```
+You are an elite, award-winning Hollywood screenwriter and script analyst. Your creative process is strictly governed by the narrative architecture of Robert McKee (Story) and Stanislavskian behavioral subtext.
+
+We are starting PHASE 1: THE COSMOLOGY & THE DIGITAL ACTORS of our short film pipeline.
+
+Analyze the following premise:
+"[USER PREMISE HERE]"
+
+Generate THREE distinct narrative directions for this setup. For each option, output a raw, well-structured JSON array matching this exact structural schema:
+```
+
+### Phase 1 Output Schema:
+
+```json
+[
+  {
+    "option_id": 1,
+    "title": "Story Title Here",
+    "setting": {
+      "dimensions": {
+        "period": "E.g., Near-future corporate espionage era",
+        "duration": "E.g., 15 minutes in real-time",
+        "location": "E.g., Rooftop Bio-Dome Penthouse",
+        "conflict_level": "E.g., Extra-personal & Personal Conflict"
+      },
+      "creative_limitation": "E.g., Confined to a single dining table set inside a hyper-responsive greenhouse"
+    },
+    "meaning": {
+      "premise": "What if...",
+      "controlling_idea": "Value + Cause (how the climax resolves)",
+      "dialectical_debate": {
+        "positive_idea": "The belief validating the protagonist's starting mask",
+        "negative_counter_idea": "The opposing truth forcing vulnerability"
+      },
+      "props_sheet": [
+        {
+          "name": "Prop Name",
+          "description": "How it acts as an interactive narrative catalyst"
+        }
+      ]
+    },
+    "characters": [
+      {
+        "id": "char_1",
+        "identity": {
+          "name": "Character Name",
+          "archetype": "Dramatic archetype function (e.g., The Saboteur, The Fallen Sentinel)",
+          "cast_orbit": "Protagonist (Core Star) / First Circle Foil / Second Circle Utility",
+          "gravity": "Core narrative purpose driving the plot",
+          "foil_relationship": "Explicit contrast relationship with target character ID (e.g., char_2)",
+          "pov": "Reliability/Observer status (e.g., Unreliable Narrator)",
+          "scale_class": "Class A [Human] / Class B [Small] / Class C [Massive]",
+          "height": "Numerical height (e.g., 180cm or 5cm)"
+        },
+        "visuals": {
+          "core_body": "Strict physical tokens (Age, Gender, Build, Skin Tone, Hair, Eyes, Distinguishing Features)",
+          "material_texture": "Strict rendering textures verbatim (e.g., pore texture, subsurface scattering, cinematic lighting)",
+          "wardrobe": {
+            "outer_mask": "Outfit A: Armor/public clothes representing social persona",
+            "inner_vulnerability": "Outfit B: Softer, personal context clothing layers representing true self",
+            "accessories": "Fixed, non-changing physical items worn/carried (e.g. silver signet ring)"
+          },
+          "negative_prompt": "Unwanted elements to exclude during image generation (e.g., plastic skin, low resolution, 3d render)"
+        },
+        "kinetics": {
+          "posture": "Physical stance and natural state of skeletal balance",
+          "weight_distribution": "How weight shift dictates physical movement",
+          "gait": "Standard walk cycle pattern and cadence",
+          "gesture_vocabulary": "Frequent physical tics, hand habits, or defensive gestures",
+          "micro_movements": "Subtle eye, jaw, or finger adjustments for high-fidelity CGI",
+          "reaction_tempo": "Response latency to external stimuli (e.g., 200ms lag under pressure)"
+        },
+        "cinematics": {
+          "framing": "Optimal camera lens/distance preset for emotional delivery",
+          "color_palette": ["primary color name/hex", "secondary color hex", "panic/climax state color hex"],
+          "lighting": "Lighting key/mood preset"
+        },
+        "audio": {
+          "voice_identity": {
+            "sonic_anchor": "Voice blending formula (e.g., Cillian Murphy's cold cadence + George Clooney's warm register)",
+            "voice_clone_id": "eleven_labs_voice_preset_or_cloning_seed"
+          },
+          "performance_styling": {
+            "timbre": "Base tonal descriptor (e.g., gravelly, soft rasp, melodic)",
+            "tempo": "Standard verbal pacing, presence of pauses"
+          },
+          "state_telemetry": {
+            "neutral_state": {
+              "stability": 75,
+              "similarity_boost": 75,
+              "style_exaggeration": 15,
+              "stress_cues": "Even breathing, calm projection, highly structured articulation"
+            },
+            "tension_state": {
+              "stability": 50,
+              "similarity_boost": 75,
+              "style_exaggeration": 35,
+              "stress_cues": "Slight micro-pauses, swallowing hard between sentences, tight projection"
+            },
+            "panic_state": {
+              "stability": 30,
+              "similarity_boost": 75,
+              "style_exaggeration": 65,
+              "stress_cues": "Voice cracking under strain, shallow rapid exhalations, sudden catching in the throat"
+            }
+          },
+          "monologue_script": "A 15-20 second monologue script explaining the character's worldview"
+        },
+        "psychology": {
+          "social": "Public mask used to control/navigate power",
+          "personal": "Behavioral texture used during moments of intimacy",
+          "core": "Underlying identity center that is fiercely guarded",
+          "hidden": "Unconscious traumas, fears, or repressions"
+        },
+        "metrics": {
+          "personality": {
+            "openness": 50,
+            "conscientiousness": 50,
+            "extraversion": 50,
+            "agreeableness": 50,
+            "neuroticism": 50
+          },
+          "quotients": {
+            "iq": 100,
+            "eq": 100,
+            "pq": 100,
+            "cq": 100
+          }
+        },
+        "motivation": {
+          "drive": "One of 12 primal McKee drives (e.g., Survival, Meaning, Power)",
+          "signature_move": "The specific, unexpected behavioral pattern used to solve problems under pressure",
+          "litmus_test": "[SUBJECT] wants [Goal], BUT faces [Constraint] while battling [Flaw], SO they [Signature Move]",
+          "conscious_desire": "The Spine: what the character thinks they want",
+          "unconscious_need": "The Absolute Contradiction: what they actually need",
+          "empathy_hook": "Core piece of vulnerability that makes the audience care",
+          "dilemma_type": "Irreconcilable Goods vs. Lesser of Evils",
+          "dilemma_desc": "Climax choice parameter",
+          "cinematic_proof": "A 1-paragraph visual scene proving this signature tactic in action"
+        },
+        "arc": {
+          "trajectory": "Arc name (e.g., Redemption, Degeneration)",
+          "step_1_preparation": "Initial state of unexpressed potential/void",
+          "step_2_revelation": "High-stakes situation where mask is stripped",
+          "step_3_change": "Sequence value transitions (e.g., Control [+] to Exposure [---])",
+          "step_4_completion": "Final action resolving desire and fulfilling need"
+        },
+        "prompts": {
+          "master_visual_reference": {
+            "character_name": "Character Name",
+            "core_keywords_used": "CORE_BODY keywords + MATERIAL_TEXTURE keywords",
+            "master_grid_prompt": "A master character design reference sheet for [core_body], [material_texture], wearing [outer_mask]. The character is [height] tall. 10-panel 5x2 grid. Top Row: Full-body Front View (0 deg), Full-body 3/4 Front View (45 deg), Full-body Profile View (90 deg), Full-body 3/4 Back View (135 deg), Full-body Back View (180 deg), Solid light grey background next to a vertical measurement bar positioned on the LEFT displaying markings for Class A/B/C metrics in clear black text. Bottom Row: Close-up Headshots showing Neutral Front View (0 deg), Neutral Profile, Joy/Laughter, Anger/Rage, Sadness/Grief. Soft even studio lighting, high-fidelity reference style. --ar 16:9"
+          }
+        }
+      }
+    ]
+  }
+]
+```
+
+> **Character Note:** The `master_grid_prompt` generates a **single wide 16:9 image** — the full 5×2 reference sheet as one file. It is NOT 10 separate generation calls. Pass the prompt directly to Higgsfield and render the returned image in a single wide container in Phase 4.
+
+> **Character State Variants:** When a character's arc transitions (injury, wardrobe change, post-revelation state), generate a second `master_grid_prompt` variant. Store it as `master_grid_prompt_state2`, `master_grid_prompt_state3`, etc. These map to the character's `arc.step_3_change` event in the timeline.
+
+---
+
+## ── PHASE 2 (Screen 02): BLUEPRINT ──
+**Endpoint:** `POST /api/generate-phase2`  
+**Objective:** Deconstruct the chosen Phase 1 option into a multi-sequence act map and generate micro-subtextual beat sheets for all actors, referencing character IDs, kinetic postures, and vocal stress states for modular consistency.
+
+> **Correction from original guide:** The copy-paste prompt in the original guide incorrectly labelled this phase as "PHASE 3". The correct label is **PHASE 2: THE PRE-PRODUCTION BLUEPRINT**.
+
+### Phase 2 Input:
+Pass the full chosen option JSON from Phase 1 as `chosenOption` in the request body.
+
+### Phase 2 Output Schema:
+
+```json
+{
+  "title": "[Chosen Story Title]",
+  "setting": "[Paste from Phase 1 chosen option]",
+  "meaning": "[Paste from Phase 1 chosen option — including premise field]",
+  "characters": "[Paste from Phase 1 chosen option — full characters array]",
+  "sequences": {
+    "act_one_sequences": [
+      {
+        "sequence_id": "A1_S1",
+        "act": "ACT ONE",
+        "actLabel": "Set-Up",
+        "title": "Sequence Title",
+        "setting_macro": "The starting location",
+        "themeFocus": "E.g., Control - Isolation - Illusion",
+        "dramatic_arc": "Brief description of the value shift in this sequence",
+        "scenes": [
+          {
+            "scene_number": 1,
+            "setting_micro": "E.g., Boardroom Chair - ECU",
+            "scene_objective": "What char_1 physically/situationally wants (Reference character ID)",
+            "opening_value": "Starting value charge",
+            "closing_value": "Ending value charge",
+            "narrative_action": "How action collides with the world to open The Gap (reference litmus_test and signature_move)",
+            "visualDesc": "Broad, atmospheric, stylistic layout of setting_macro"
+          }
+        ]
+      }
+    ],
+    "act_two_sequences": [
+      {
+        "sequence_id": "A2_S1",
+        "act": "ACT TWO",
+        "actLabel": "Confrontation",
+        "title": "Sequence Title",
+        "setting_macro": "The new macro setting location",
+        "themeFocus": "E.g., Exposure - Disorientation",
+        "dramatic_arc": "Description of the value escalation",
+        "scenes": [
+          {
+            "scene_number": 2,
+            "setting_micro": "E.g., Vivarium Door - Wide",
+            "scene_objective": "Target scene goal (reference char_id)",
+            "opening_value": "",
+            "closing_value": "",
+            "narrative_action": "",
+            "visualDesc": ""
+          }
+        ]
+      }
+    ],
+    "act_three_sequences": [
+      {
+        "sequence_id": "A3_S1",
+        "act": "ACT THREE",
+        "actLabel": "Resolution",
+        "title": "Sequence Title",
+        "setting_macro": "The climax macro setting",
+        "themeFocus": "E.g., Connotation - Transformation",
+        "dramatic_arc": "Climax and Resolution transition arc",
+        "scenes": [
+          {
+            "scene_number": 5,
+            "setting_micro": "E.g., Core Interface - Close",
+            "scene_objective": "",
+            "opening_value": "",
+            "closing_value": "",
+            "narrative_action": "",
+            "visualDesc": ""
+          }
+        ]
+      }
+    ]
+  },
+  "beats": [
+    {
+      "target_sequence_id": "A1_S1",
+      "scene_number": 1,
+      "micro_blueprint": {
+        "scene_objective": "Scene target objective",
+        "opening_value": "Opening emotional/moral value charge",
+        "closing_value": "Closing value charge after beat progression",
+        "subtextual_beat_progression": [
+          {
+            "beat_number": 1,
+            "action": "char_1: ACTIVE GERUND + KINETIC DETAIL (e.g., FEIGNING ACCOUNTABILITY while compulsively turning his signet ring)",
+            "reaction": "char_2: ACTIVE GERUND + KINETIC REACT (e.g., MANAGING THE TRAP, her eyes tracking his hand movements)",
+            "text": "The literal spoken line acting as a surface mask",
+            "vocal_state": "neutral_state | tension_state | panic_state",
+            "status": "Psychological tension indicator (e.g., Internal Pressure: 72%, Heartrate: 94bpm)",
+            "visual_flora": "Biochemical shift of greenhouse flora triggered by stress metrics (e.g., orchids pulse defensive amber)"
+          }
+        ]
+      }
+    }
+  ],
+  "logline": "A single, high-velocity sentence: protagonist, inciting incident, Spine, and central ironic stakes."
+}
+```
+
+> **Beat Generation Rule:** Generate a minimum of 3 beats per scene for all scenes across Acts I, II, and III. Every beat must feature active, CAPITALIZED gerund subtext tags, physical kinetic details, and `vocal_state` tags linked to character IDs.
+
+> **Shot ID Convention:** Beats auto-generate shot IDs in the format `A{act}_Q{sequence}_S{scene}_B{beat}` (e.g., `A1_Q1_S1_B1`). This ID is the reference key used in Phase 5 shot generation.
+
+---
+
+## ── PHASE 3 (Screen 03): SCREENPLAY ──
+**Endpoint:** `POST /api/generate-phase3`  
+**Objective:** Translate the complete, locked Phase 2 JSON blueprint into a professional, production-ready screenplay with deep subtext, integrating kinetic vocabulary and dynamic vocal stress cues into the script page.
+
+> **Correction from original guide:** The copy-paste prompt in the original guide incorrectly labelled this phase as "PHASE 5". The correct label is **PHASE 3: THE SCRIPT EXECUTION**.
+
+### Phase 3 Input:
+Pass the full Phase 2 blueprint JSON as `blueprint` in the request body.
+
+### Execution Laws (passed as system instructions):
+
+1. **FORMAT:** Standard screenplay layout. CHARACTER NAMES in uppercase at dialogue headings and action line introductions. Parentheticals denote active vocal stress states — never literal physical actions.
+
+2. **DIALOGUE SUBTEXT CONSTRAINT:** Every spoken line acts as a diplomatic surface mask. Dialogue must naturally deliver the psychological agendas mapped in the `subtextual_beat_progression` gerund tags. Characters never speak inner truths until the Story Climax.
+
+3. **KINETIC PHYSICALITY:** Weave each character's kinetic profile (`posture`, `gait`, `gesture_vocabulary`, `reaction_tempo`) directly into action blocks. Replace dry exposition with physical somatic gestures.
+
+4. **VOCAL STATE PARENTHETICALS:** Translate `vocal_state` from beats into precise parentheticals using the exact `stress_cues` text (e.g., `(voice cracking under strain, shallow rapid exhalations)`).
+
+5. **FRENCH SCENES:** Advance internal rhythm every time a character enters, exits, or radically alters power dynamics.
+
+6. **VARIATION:** Alternate rapid visual action blocks with expansive, emotionally dense subtextual confrontations.
+
+7. **THEMATIC TRANSITIONS:** Link consecutive scenes using a sensory hinge — a shared object, opposing light quality, sound bridge, or word contrast.
+
+8. **VISUAL FLORA:** Include `visual_flora` color shifts (e.g., violet, pale lavender, defensive crimson) in action blocks to represent characters' biochemical stress states.
+
+### Phase 3 Output:
+Plain text screenplay in standard Hollywood format. No JSON wrapper. The script begins immediately on the first line.
+
+---
+
+## ── PHASE 4 (Screen 04): VISUAL ASSET GENERATION ──
+**Endpoint:** `POST /api/generate-visual`  
+**Powered by:** Higgsfield REST API  
+**Objective:** Generate the complete visual asset library before any shot generation — characters, locations, and props — using data already present in the Phase 1 JSON.
+
+### Three Asset Tabs:
+
+**Characters Tab**
+- One sub-tab per cast member
+- Pulls `prompts.master_visual_reference.master_grid_prompt` directly from Phase 1 JSON
+- Appends `--ar 16:9` to every grid prompt before sending to Higgsfield
+- Passes `visuals.negative_prompt` as the `negative_prompt` parameter
+- Returns a single wide 16:9 image — render in one wide container, not a grid of cells
+- Caption below: `Row 1: Full-body poses (5 angles)` / `Row 2: Headshots (5 expressions)`
+- Approve button increments the asset counter
+- "Add State Variant" button generates a second grid when the character's arc transitions
+
+**Locations Tab**
+- One card per unique `setting_macro` value across all sequences
+- Prompt built from `setting_macro` + `visualDesc` + style preset from Phase 2
+
+**Props Tab**
+- One card per item in `meaning.props_sheet`
+- Prompt built from `name` + `description` of each prop
+
+### Higgsfield API Call Structure:
+```typescript
+POST https://api.higgsfield.ai/v1/image/generate
+Headers:
+  Authorization: Bearer ${HIGGSFIELD_API_KEY}
+  X-Secret: ${HIGGSFIELD_SECRET}
+Body:
+{
+  prompt: character.prompts.master_visual_reference.master_grid_prompt,
+  negative_prompt: character.visuals.negative_prompt,
+  model: "soul",
+  aspect_ratio: "16:9"
+}
+```
+
+Poll `GET /api/job-status/:jobId` every 3 seconds until status = `completed` or `failed`.
+
+---
+
+## ── PHASE 5 (Screen 05): SHOT GENERATION ──
+**Endpoint:** `POST /api/generate-shot`  
+**Powered by:** Higgsfield Seedance 2.0  
+**Objective:** Convert each scene's shot list into storyboard images, then promote approved images to video clips.
+
+### Shot ID System:
+Each shot maps to a beat using the convention: `A{act}_Q{sequence}_S{scene}_B{beat}`  
+Example: `A1_Q1_S1_B1` = Act 1, Sequence 1, Scene 1, Beat 1
+
+> **Generation unit is the SHOT, not the beat.** Beats inform the motion description inside a shot prompt. Each video clip corresponds to a camera setup (`setting_micro` field). A single shot may contain 2–3 beats worth of action.
+
+### Seedance 2.0 Prompt Format:
+Build prompts using this exact structure from Phase 2 beat data:
+
+```
+[SHOT SETUP] {setting_micro framing}, {character.cinematics.framing}, {character.cinematics.lighting}
+[OPENING FRAME] {beat.action physical description — focal target and body state}
+[MOTION] {char_id}: {beat.action gerund} — {kinetics.gesture_vocabulary detail}
+[CLOSING FRAME] {beat.reaction physical description — closing body state of responding character}
+[ATMOSPHERE] {beat.visual_flora} | Vocal state: {beat.vocal_state}
+```
+
+### Generation Flow:
+1. "Generate Image" → single image render via Higgsfield Soul or Nano Banana 2
+2. Image approved → "Promote to Video" → Seedance 2.0 video generation
+3. Video approved → shot marked complete (green dot in shot list)
+4. All shots complete → "Proceed to Assembly →" CTA unlocks
+
+### Character State Selector:
+For each shot, display a selector: `Baseline` or `Post-Arc (State 2)` per character. This determines which character grid variant was used as the reference for that generation.
+
+---
+
+## ── PHASE 6 (Screen 06): ASSEMBLY & EXPORT ──
+**Endpoint:** Uses Higgsfield Canvas + ElevenLabs  
+**Objective:** Arrange approved video clips into a final cut with character audio and virality scoring.
+
+### Assembly Components:
+
+**Timeline**
+- Horizontal drag-to-reorder strip of all approved video clips
+- Each clip labelled with shot ID and opening beat text snippet
+- Click a clip to view its beat reference, character state, and flora/environment context
+
+**ElevenLabs Audio Panel** (per selected clip)
+- Pulls `audio.voice_identity.voice_clone_id` and the active `vocal_state` telemetry for that beat
+- Stability, similarity_boost, and style_exaggeration values fed directly from character's `state_telemetry` JSON
+- Requires `ELEVENLABS_API_KEY` in Replit Secrets
+
+**Virality Predictor**
+- Calls Higgsfield Virality Predictor tool (MCP or REST equivalent)
+- Scores: Emotional Impact, Visual Novelty, Pacing Score
+- Displays overall engagement score (0–100) with one-line recommendation
+
+**Export**
+- "Export Final Cut" button → downloads assembled video
+- Commercial rights granted on Studio plan tier only
+
+---
+
+## ── ENVIRONMENT VARIABLES (Replit Secrets) ──
+
+```
+GEMINI_API_KEY         ← Phase 1, 2, 3 (use gemini-2.0-flash model string)
+HIGGSFIELD_API_KEY     ← Phase 4, 5, 6
+HIGGSFIELD_SECRET      ← Phase 4, 5, 6
+ELEVENLABS_API_KEY     ← Phase 6 audio
+SUPABASE_URL           ← Auth + project persistence
+SUPABASE_ANON_KEY      ← Client-side auth
+SUPABASE_SERVICE_ROLE_KEY ← Server-side writes
+```
+
+---
+
+## ── KNOWN BUGS TO FIX IN server.ts ──
+
+| Line | Issue | Fix |
+|---|---|---|
+| Phase 1 prompt header | `"PHASE 1"` — correct ✓ | No change needed |
+| Phase 2 prompt header | Says `"PHASE 2"` internally — correct ✓ | Verify copy-paste guide was the mislabelled one |
+| Phase 3 prompt header | Says `"PHASE 3"` internally — correct ✓ | Verify copy-paste guide was the mislabelled one |
+| All 3 model strings | `"gemini-3.5-flash"` | Change to `"gemini-2.0-flash"` |
+| Phase 2 meaning schema | Missing `premise` field passthrough | Add `"premise": chosenOption.meaning?.premise` in prompt |
+
+---
+
+*Version 2 — Updated to reflect the 6-phase production pipeline, Higgsfield REST integration, Supabase auth layer, and corrected prompt phase labels. Aligned to `server.ts` as of May 2026.*
