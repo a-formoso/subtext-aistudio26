@@ -34,15 +34,18 @@ interface ShotJob {
 type FlatShot = {
   shotId: string; blueprintShotId?: string; seqId: string; seqTitle: string; sceneNum: number;
   beatNum: number; text: string; action: string; reaction: string;
-  flora: string; vocal: string; framing: string; setting: string;
-  charName: string; charId: string; settingAbbrev: string;
+  flora: string; vocal: string; framing: string; lighting: string;
+  gestureVocab: string; setting: string; charName: string; charId: string; settingAbbrev: string;
 };
 
 function buildSeedancePrompt(shot: FlatShot, variantLabel?: string) {
   const stateNote = variantLabel ? `\n[CHARACTER STATE] ${variantLabel}` : "";
-  return `[SHOT SETUP] ${shot.framing}, anamorphic 35mm, cinematic key light
-[OPENING FRAME] ${shot.charName} — ${shot.setting}
-[MOTION] ${shot.action}
+  const actionGerund = shot.action.split(":").slice(1).join(":").trim() || shot.action;
+  const gestureDetail = shot.gestureVocab || "measured deliberate movement";
+  const lighting = shot.lighting || "chiaroscuro key, heavy negative slope shadow, sharp rim highlight";
+  return `[SHOT SETUP] ${shot.setting}, ${shot.framing}, ${lighting}
+[OPENING FRAME] ${actionGerund} — focal target and body state
+[MOTION] ${shot.charId}: ${actionGerund} — ${gestureDetail}
 [CLOSING FRAME] ${shot.reaction}
 [ATMOSPHERE] ${shot.flora} | Vocal state: ${shot.vocal}${stateNote}`.trim();
 }
@@ -87,6 +90,8 @@ export function Phase5Shots({ blueprint, onProceed, characterVariants = [] }: Ph
           flora: beat.visual_flora,
           vocal: beat.vocal_state || "neutral_state",
           framing: speaker?.cinematics?.framing || "MCU",
+          lighting: speaker?.cinematics?.lighting || "chiaroscuro key, heavy negative slope shadow, sharp rim highlight",
+          gestureVocab: speaker?.kinetics?.gesture_vocabulary || "",
           setting: settingRaw,
           settingAbbrev: abbreviateSetting(settingRaw),
           charName: speaker?.identity?.name || "Character",
@@ -359,36 +364,57 @@ export function Phase5Shots({ blueprint, onProceed, characterVariants = [] }: Ph
                   </div>
 
                   {/* Character version selector */}
-                  {activeCharVariants.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="font-mono text-[9px] text-slate-500 uppercase tracking-wider block">Character Version</span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <button
-                          onClick={() => setVariant(activeShot.shotId, undefined)}
-                          className={`px-2.5 py-1 rounded font-mono text-[9px] font-bold border transition-all cursor-pointer ${
-                            !activeJob?.selectedVariant
-                              ? "bg-white/15 border-white/25 text-white"
-                              : "bg-black/50 border-white/10 text-slate-400 hover:text-white"
-                          }`}
-                        >
-                          BASE
-                        </button>
-                        {activeCharVariants.map(v => (
+                  {(() => {
+                    // Combine user-added variants with auto-detected arc state variants from the active character
+                    const activeChar = characters.find(c => c.id === activeShot.charId) ?? characters[0];
+                    const ref = activeChar?.prompts?.master_visual_reference as Record<string, string | undefined> | undefined;
+                    const arcStateVariants: { variantId: string; label: string }[] = [];
+                    if (ref) {
+                      let i = 2;
+                      while (ref[`master_grid_prompt_state${i}`]) {
+                        arcStateVariants.push({
+                          variantId: `${activeChar?.id}_arc_state${i}`,
+                          label: `Post-Arc (State ${i})`,
+                        });
+                        i++;
+                      }
+                    }
+                    const allVariants = [
+                      ...arcStateVariants,
+                      ...activeCharVariants.filter(v => !arcStateVariants.some(a => a.variantId === v.variantId)),
+                    ];
+                    if (allVariants.length === 0) return null;
+                    return (
+                      <div className="space-y-1.5">
+                        <span className="font-mono text-[9px] text-slate-500 uppercase tracking-wider block">Character State</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <button
-                            key={v.variantId}
-                            onClick={() => setVariant(activeShot.shotId, v.variantId)}
+                            onClick={() => setVariant(activeShot.shotId, undefined)}
                             className={`px-2.5 py-1 rounded font-mono text-[9px] font-bold border transition-all cursor-pointer ${
-                              activeJob?.selectedVariant === v.variantId
-                                ? "bg-violet-900/40 border-violet-500/40 text-violet-200"
-                                : "bg-black/50 border-white/10 text-slate-400 hover:text-violet-200 hover:border-violet-700/40"
+                              !activeJob?.selectedVariant
+                                ? "bg-white/15 border-white/25 text-white"
+                                : "bg-black/50 border-white/10 text-slate-400 hover:text-white"
                             }`}
                           >
-                            {v.label}
+                            Baseline
                           </button>
-                        ))}
+                          {allVariants.map(v => (
+                            <button
+                              key={v.variantId}
+                              onClick={() => setVariant(activeShot.shotId, v.variantId)}
+                              className={`px-2.5 py-1 rounded font-mono text-[9px] font-bold border transition-all cursor-pointer ${
+                                activeJob?.selectedVariant === v.variantId
+                                  ? "bg-violet-900/40 border-violet-500/40 text-violet-200"
+                                  : "bg-black/50 border-white/10 text-slate-400 hover:text-violet-200 hover:border-violet-700/40"
+                              }`}
+                            >
+                              {v.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Prompt editor */}
                   <div>

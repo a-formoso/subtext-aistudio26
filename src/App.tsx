@@ -464,6 +464,7 @@ export default function App() {
                       {activePhase === 4 && (
                         <Phase4Visuals
                           selectedOption={selectedOption}
+                          blueprint={selectedBlueprint}
                           onProceed={handleProceedToShots}
                           characterVariants={characterVariants}
                           onAddVariant={(v) => setCharacterVariants(prev => [...prev, v])}

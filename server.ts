@@ -551,7 +551,7 @@ app.post("/api/generate-visual", async (req, res) => {
   if (negativePrompt) higgsfieldBody.negative_prompt = negativePrompt;
 
   try {
-    const response = await fetch("https://api.higgsfield.ai/v1/images/generate", {
+    const response = await fetch("https://api.higgsfield.ai/v1/image/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -605,7 +605,7 @@ app.post("/api/generate-shot", async (req, res) => {
 
   try {
     if (type === "image") {
-      const response = await fetch("https://api.higgsfield.ai/v1/images/generate", {
+      const response = await fetch("https://api.higgsfield.ai/v1/image/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { StoryOption, Character } from "../types";
-import { getStoryCharacters, getStoryMeaning } from "../utils/schemaConverter";
+import { StoryOption, Character, Blueprint } from "../types";
+import { getStoryCharacters, getStoryMeaning, getBlueprintSequences } from "../utils/schemaConverter";
 import {
   Sparkles, RefreshCw, ArrowRight, Film,
   CheckCircle, AlertCircle, User, MapPin, Package, Plus, Lock, X,
@@ -20,6 +20,7 @@ async function getAuthHeader(): Promise<Record<string, string>> {
 
 interface Phase4VisualsProps {
   selectedOption: StoryOption;
+  blueprint?: Blueprint;
   onProceed: () => void;
   characterVariants: CharacterVariant[];
   onAddVariant: (v: CharacterVariant) => void;
@@ -58,7 +59,7 @@ function buildMasterGridPrompt(char: Character): string {
   return `A master character design reference sheet for ${coreBody}, ${texture}, wearing ${outerMask}. The character is ${height} tall. 10-panel 5x2 grid. Top Row: Full-body Front View (0 deg), Full-body 3/4 Front View (45 deg), Full-body Profile View (90 deg), Full-body 3/4 Back View (135 deg), Full-body Back View (180 deg). Solid light grey background next to a vertical measurement bar positioned on the LEFT displaying markings for height in clear increments. Bottom Row: Close-up Neutral Front View (0 deg), Neutral Profile, Joy/Laughter (natural), Anger/Rage, Sadness/Grief. Consistent studio lighting, photorealistic, ultra high detail, film production reference quality.`;
 }
 
-export function Phase4Visuals({ selectedOption, onProceed, characterVariants, onAddVariant }: Phase4VisualsProps) {
+export function Phase4Visuals({ selectedOption, blueprint, onProceed, characterVariants, onAddVariant }: Phase4VisualsProps) {
   const [activeTab, setActiveTab] = useState<AssetTab>("characters");
   const [activeCharIdx, setActiveCharIdx] = useState(0);
   const [assets, setAssets] = useState<Record<string, GeneratedAsset>>({});
@@ -68,11 +69,38 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
 
   const characters = getStoryCharacters(selectedOption);
   const meaning = getStoryMeaning(selectedOption);
-  const setting = selectedOption.setting?.dimensions || selectedOption.step_1_and_2_cosmology_and_actors?.dimensions;
 
-  const locations = setting ? [
-    { id: "loc_main", name: setting.location || "Primary Location", desc: setting.period + " — " + setting.conflict_level },
-  ] : [];
+  // Extract unique setting_macros from blueprint sequences, falling back to story setting dimensions
+  const locations: { id: string; name: string; desc: string; visualDesc: string }[] = (() => {
+    if (blueprint) {
+      const seqMap = getBlueprintSequences(blueprint);
+      const allSeqs = [
+        ...(seqMap.act_one_sequences || []),
+        ...(seqMap.act_two_sequences || []),
+        ...(seqMap.act_three_sequences || []),
+      ];
+      const seen = new Set<string>();
+      const locs: { id: string; name: string; desc: string; visualDesc: string }[] = [];
+      allSeqs.forEach((seq, si) => {
+        const macro = seq.setting_macro || "";
+        if (macro && !seen.has(macro)) {
+          seen.add(macro);
+          const firstScene = seq.scenes?.[0];
+          const visualDesc = (firstScene as any)?.visualDesc || seq.themeFocus || "";
+          locs.push({
+            id: `loc_seq_${si}`,
+            name: macro,
+            desc: seq.dramatic_arc || seq.themeFocus || "",
+            visualDesc,
+          });
+        }
+      });
+      if (locs.length > 0) return locs;
+    }
+    const setting = selectedOption.setting?.dimensions || selectedOption.step_1_and_2_cosmology_and_actors?.dimensions;
+    return setting ? [{ id: "loc_main", name: setting.location || "Primary Location", desc: setting.period + " — " + setting.conflict_level, visualDesc: "" }] : [];
+  })();
+
   const props = meaning.props_sheet || [];
 
   useEffect(() => {
@@ -244,17 +272,25 @@ export function Phase4Visuals({ selectedOption, onProceed, characterVariants, on
                   <EmptyState message="No locations extracted from story data." />
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {locations.map(loc => (
-                      <AssetCard
-                        key={loc.id}
-                        label={loc.name}
-                        sublabel={loc.desc}
-                        asset={assets[loc.id]}
-                        approved={approvedIds.has(loc.id)}
-                        onGenerate={() => generateAsset(loc.id, `Cinematic establishing shot of ${loc.name}. ${loc.desc}. High-fidelity, photorealistic, anamorphic lens, moody lighting.`)}
-                        onApprove={() => approveAsset(loc.id)}
-                      />
-                    ))}
+                    {locations.map(loc => {
+                      const locPrompt = [
+                        `Cinematic establishing shot of ${loc.name}.`,
+                        loc.desc ? loc.desc : "",
+                        loc.visualDesc ? loc.visualDesc : "",
+                        "Anamorphic 35mm lens, moody chiaroscuro lighting, photorealistic, ultra high detail, film production reference quality.",
+                      ].filter(Boolean).join(" ");
+                      return (
+                        <AssetCard
+                          key={loc.id}
+                          label={loc.name}
+                          sublabel={loc.desc}
+                          asset={assets[loc.id]}
+                          approved={approvedIds.has(loc.id)}
+                          onGenerate={() => generateAsset(loc.id, locPrompt)}
+                          onApprove={() => approveAsset(loc.id)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </motion.div>
